@@ -3,15 +3,21 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
 
   <meta
     name="description"
-    content="Latest real estate insights, market guides and investment strategies from Pinnacle Realty."
+    content="Education, market insights, videos and real estate guides from Pinnacle Realty."
   >
 
-  <title>Blog | Join Pinnacle Realty</title>
+  <title>Education | Pinnacle Realty</title>
 
+
+  <!-- FONTS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -20,44 +26,728 @@
     rel="stylesheet"
   >
 
+
   <!-- FAVICONS -->
   <link rel="icon" href="favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="favicon-32x32.png"
+  >
+
+  <link
+    rel="apple-touch-icon"
+    href="apple-touch-icon.png"
+  >
+
+
+  <!-- MAIN SITE CSS -->
   <link rel="stylesheet" href="style.css">
+
+
+  <!-- EDUCATION VIDEO CSS -->
+  <style>
+
+    /* ======================================================
+       VIDEO EDUCATION SECTION
+    ====================================================== */
+
+    .education-video-section{
+      background:#0d0e0f;
+      color:#fff;
+      padding:94px 0 100px;
+      overflow:hidden;
+    }
+
+
+    .education-video-heading{
+      display:grid;
+      grid-template-columns:1fr .7fr;
+      gap:60px;
+      align-items:end;
+      margin-bottom:50px;
+    }
+
+
+    .education-video-heading h2{
+      font-family:Manrope,sans-serif;
+      font-size:clamp(40px,5vw,66px);
+      line-height:1.02;
+      letter-spacing:-.045em;
+      margin:0;
+    }
+
+
+    .education-video-heading h2 em{
+      color:#c7a35d;
+      font-style:normal;
+    }
+
+
+    .education-video-heading p{
+      color:#aaa;
+      font-size:15px;
+      max-width:560px;
+      margin:0;
+    }
+
+
+    .education-video-number{
+      font:
+        10px
+        "DM Mono",
+        monospace;
+
+      letter-spacing:.1em;
+      color:#808285;
+      margin-bottom:22px;
+    }
+
+
+    .education-video-number span{
+      margin-left:10px;
+    }
+
+
+
+    /* ======================================================
+       VIDEO GRID
+    ====================================================== */
+
+    .education-video-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:20px;
+    }
+
+
+    .education-video-card{
+      position:relative;
+
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+
+      border-radius:18px;
+
+      background:#141618;
+
+      overflow:hidden;
+
+      cursor:pointer;
+
+      transition:
+        transform .35s ease,
+        border-color .35s ease,
+        box-shadow .35s ease;
+
+      animation:
+        educationVideoEnter
+        .55s ease
+        both;
+    }
+
+
+    .education-video-card:hover{
+      transform:translateY(-6px);
+
+      border-color:
+        rgba(199,163,93,.48);
+
+      box-shadow:
+        0 24px 60px
+        rgba(0,0,0,.30);
+    }
+
+
+    @keyframes educationVideoEnter{
+
+      from{
+        opacity:0;
+        transform:translateY(20px);
+      }
+
+      to{
+        opacity:1;
+        transform:translateY(0);
+      }
+
+    }
+
+
+
+    /* ======================================================
+       VIDEO THUMBNAIL
+    ====================================================== */
+
+    .education-video-thumb{
+      position:relative;
+
+      aspect-ratio:16/9;
+
+      overflow:hidden;
+
+      background:#090a0b;
+    }
+
+
+    .education-video-thumb img{
+      width:100%;
+      height:100%;
+
+      display:block;
+
+      object-fit:cover;
+
+      transition:
+        transform .55s
+        cubic-bezier(.2,.7,.2,1);
+    }
+
+
+    .education-video-card:hover
+    .education-video-thumb img{
+      transform:scale(1.045);
+    }
+
+
+    .education-video-thumb::after{
+      content:"";
+
+      position:absolute;
+      inset:0;
+
+      background:
+        linear-gradient(
+          to top,
+          rgba(0,0,0,.42),
+          rgba(0,0,0,.02) 55%
+        );
+
+      pointer-events:none;
+    }
+
+
+
+    /* ======================================================
+       PLAY BUTTON
+    ====================================================== */
+
+    .education-play{
+      position:absolute;
+
+      top:50%;
+      left:50%;
+
+      z-index:2;
+
+      width:68px;
+      height:68px;
+
+      transform:
+        translate(-50%,-50%);
+
+      display:grid;
+      place-items:center;
+
+      border:0;
+      border-radius:50%;
+
+      background:#c7a35d;
+      color:#111;
+
+      cursor:pointer;
+
+      box-shadow:
+        0 12px 35px
+        rgba(0,0,0,.35);
+
+      transition:
+        transform .28s ease,
+        background .28s ease;
+    }
+
+
+    .education-video-card:hover
+    .education-play{
+      transform:
+        translate(-50%,-50%)
+        scale(1.08);
+
+      background:#e0bf78;
+    }
+
+
+    .education-play svg{
+      width:19px;
+      height:19px;
+
+      fill:currentColor;
+
+      margin-left:3px;
+    }
+
+
+
+    /* ======================================================
+       VIDEO CONTENT
+    ====================================================== */
+
+    .education-video-content{
+      padding:23px 23px 25px;
+    }
+
+
+    .education-video-label{
+      display:block;
+
+      font:
+        9px
+        "DM Mono",
+        monospace;
+
+      letter-spacing:.13em;
+
+      color:#c7a35d;
+
+      margin-bottom:12px;
+    }
+
+
+    .education-video-content h3{
+      font-family:Manrope,sans-serif;
+
+      font-size:21px;
+      line-height:1.16;
+
+      letter-spacing:-.035em;
+
+      color:#fff;
+
+      margin:0;
+    }
+
+
+    .education-video-action{
+      display:flex;
+      align-items:center;
+      gap:8px;
+
+      color:#aaa;
+
+      font-size:12px;
+      font-weight:600;
+
+      margin-top:18px;
+
+      transition:color .25s ease;
+    }
+
+
+    .education-video-card:hover
+    .education-video-action{
+      color:#e0bf78;
+    }
+
+
+
+    /* ======================================================
+       LOADING / EMPTY / ERROR STATES
+    ====================================================== */
+
+    .education-video-state{
+      grid-column:1/-1;
+
+      min-height:180px;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      text-align:center;
+
+      border:
+        1px dashed
+        rgba(255,255,255,.13);
+
+      border-radius:18px;
+
+      color:#777;
+
+      padding:35px;
+    }
+
+
+    .education-loader{
+      width:28px;
+      height:28px;
+
+      border:
+        2px solid
+        rgba(255,255,255,.15);
+
+      border-top-color:#c7a35d;
+
+      border-radius:50%;
+
+      animation:
+        educationSpin
+        .8s linear
+        infinite;
+
+      margin:0 auto 15px;
+    }
+
+
+    @keyframes educationSpin{
+      to{
+        transform:rotate(360deg);
+      }
+    }
+
+
+
+    /* ======================================================
+       LOAD MORE
+    ====================================================== */
+
+    .education-load-more-wrap{
+      display:none;
+
+      justify-content:center;
+
+      margin-top:45px;
+    }
+
+
+    .education-load-more-wrap.visible{
+      display:flex;
+    }
+
+
+    .education-load-more{
+      min-width:150px;
+
+      border:0;
+
+      border-radius:999px;
+
+      padding:15px 25px;
+
+      background:#c7a35d;
+
+      color:#111;
+
+      font:800 13px Inter,sans-serif;
+
+      cursor:pointer;
+
+      transition:
+        background .25s ease,
+        transform .25s ease;
+    }
+
+
+    .education-load-more:hover{
+      background:#e0bf78;
+      transform:translateY(-2px);
+    }
+
+
+    .education-load-more:disabled{
+      opacity:.55;
+      cursor:default;
+      transform:none;
+    }
+
+
+
+    /* ======================================================
+       VIDEO MODAL
+    ====================================================== */
+
+    .education-modal{
+      position:fixed;
+      inset:0;
+
+      z-index:99999;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      padding:28px;
+
+      opacity:0;
+      visibility:hidden;
+
+      pointer-events:none;
+
+      transition:
+        opacity .3s ease,
+        visibility .3s ease;
+    }
+
+
+    .education-modal.open{
+      opacity:1;
+      visibility:visible;
+
+      pointer-events:auto;
+    }
+
+
+    .education-modal-backdrop{
+      position:absolute;
+      inset:0;
+
+      background:
+        rgba(3,4,5,.91);
+
+      backdrop-filter:blur(13px);
+      -webkit-backdrop-filter:blur(13px);
+    }
+
+
+    .education-modal-dialog{
+      position:relative;
+
+      z-index:2;
+
+      width:min(1080px,100%);
+
+      opacity:0;
+
+      transform:
+        translateY(18px)
+        scale(.975);
+
+      transition:
+        opacity .32s ease,
+        transform .32s
+        cubic-bezier(.2,.8,.2,1);
+    }
+
+
+    .education-modal.open
+    .education-modal-dialog{
+      opacity:1;
+
+      transform:
+        translateY(0)
+        scale(1);
+    }
+
+
+
+    /* ======================================================
+       MODAL HEADER
+    ====================================================== */
+
+    .education-modal-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+
+      gap:25px;
+
+      margin-bottom:17px;
+    }
+
+
+    .education-modal-copy{
+      min-width:0;
+    }
+
+
+    .education-modal-kicker{
+      display:block;
+
+      font:
+        9px
+        "DM Mono",
+        monospace;
+
+      letter-spacing:.14em;
+
+      color:#c7a35d;
+
+      margin-bottom:7px;
+    }
+
+
+    .education-modal-title{
+      font-family:Manrope,sans-serif;
+
+      font-size:
+        clamp(
+          19px,
+          2.5vw,
+          29px
+        );
+
+      line-height:1.12;
+
+      letter-spacing:-.035em;
+
+      color:#fff;
+
+      margin:0;
+
+      max-width:820px;
+    }
+
+
+    .education-modal-close{
+      flex:0 0 auto;
+
+      width:46px;
+      height:46px;
+
+      border:
+        1px solid
+        rgba(255,255,255,.18);
+
+      border-radius:50%;
+
+      background:
+        rgba(255,255,255,.04);
+
+      color:#fff;
+
+      font-size:26px;
+      line-height:1;
+
+      cursor:pointer;
+
+      transition:
+        background .25s ease,
+        border-color .25s ease;
+    }
+
+
+    .education-modal-close:hover{
+      background:
+        rgba(255,255,255,.10);
+
+      border-color:
+        rgba(199,163,93,.65);
+    }
+
+
+
+    /* ======================================================
+       MODAL PLAYER
+    ====================================================== */
+
+    .education-modal-player{
+      width:100%;
+
+      aspect-ratio:16/9;
+
+      overflow:hidden;
+
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+
+      border-radius:18px;
+
+      background:#000;
+
+      box-shadow:
+        0 30px 100px
+        rgba(0,0,0,.6);
+    }
+
+
+    .education-modal-player iframe{
+      width:100%;
+      height:100%;
+
+      display:block;
+
+      border:0;
+    }
+
+
+
+    /* ======================================================
+       MOBILE
+    ====================================================== */
+
+    @media(max-width:900px){
+
+      .education-video-heading{
+        grid-template-columns:1fr;
+        gap:22px;
+      }
+
+
+      .education-video-grid{
+        grid-template-columns:
+          repeat(2,minmax(0,1fr));
+      }
+
+    }
+
+
+    @media(max-width:650px){
+
+      .education-video-section{
+        padding:72px 0;
+      }
+
+
+      .education-video-grid{
+        grid-template-columns:1fr;
+      }
+
+
+      .education-video-content{
+        padding:20px;
+      }
+
+
+      .education-modal{
+        padding:17px;
+      }
+
+
+      .education-modal-top{
+        align-items:center;
+      }
+
+
+      .education-modal-close{
+        width:42px;
+        height:42px;
+      }
+
+
+      .education-play{
+        width:60px;
+        height:60px;
+      }
+
+    }
+
+  </style>
 </head>
+
 
 <body>
 
   <div class="noise"></div>
 
 
-  <!-- ANNOUNCEMENT BAR -->
-  <div class="announcement">
 
-    <div class="container announcement-inner">
+  <!-- ======================================================
+       HEADER
+  ====================================================== -->
 
-      <span class="pulse"></span>
-
-      <span>
-        Now welcoming growth-minded agents across Ontario
-      </span>
-
-      <a
-        href="https://calendly.com/jag-pinnaclerealty"
-        target="_blank"
-        rel="noopener"
-      >
-        Start your application ↗
-      </a>
-
-    </div>
-
-  </div>
-
-
-  <!-- HEADER -->
   <header class="site-header">
 
     <div class="container nav-wrap">
@@ -70,33 +760,49 @@
         <span class="brand-mark">
 
           <svg viewBox="0 0 64 64">
-            <path d="M10 48 32 10l22 38H43L32 29 21 48H10Z"/>
+
+            <path
+              d="M10 48 32 10l22 38H43L32 29 21 48H10Z"
+            />
+
             <path
               d="M25 48h14l-7-12-7 12Z"
               class="brand-cut"
             />
+
           </svg>
 
         </span>
 
+
         <span class="brand-copy">
-          <strong>PINNΛCLE</strong>
-          <small>REALTY</small>
+
+          <strong>
+            PINNΛCLE
+          </strong>
+
+          <small>
+            REALTY
+          </small>
+
         </span>
 
       </a>
 
 
+
       <!-- DESKTOP NAV -->
+
       <nav class="desktop-nav">
 
         <a href="index.html">
           Home
         </a>
 
+
         <a
-          class="active"
           href="blog.html"
+          class="active"
         >
           Education
         </a>
@@ -104,7 +810,7 @@
       </nav>
 
 
-      <!-- DESKTOP SCHEDULE BUTTON -->
+
       <a
         class="btn btn-small btn-gold desktop-cta"
         href="https://calendly.com/jag-pinnaclerealty"
@@ -115,7 +821,12 @@
       </a>
 
 
-      <button class="menu-btn">
+
+      <button
+        class="menu-btn"
+        aria-label="Open menu"
+        aria-expanded="false"
+      >
         <span></span>
         <span></span>
       </button>
@@ -123,16 +834,23 @@
     </div>
 
 
+
     <!-- MOBILE MENU -->
-    <div class="mobile-menu">
+
+    <div
+      class="mobile-menu"
+      aria-hidden="true"
+    >
 
       <a href="index.html">
         Home
       </a>
 
+
       <a href="blog.html">
         Education
       </a>
+
 
       <a
         class="btn btn-gold"
@@ -148,9 +866,15 @@
   </header>
 
 
+
   <main>
 
-    <!-- HERO -->
+
+
+    <!-- ======================================================
+         HERO
+    ====================================================== -->
+
     <section class="page-hero section-dark">
 
       <div class="container">
@@ -158,8 +882,9 @@
         <div class="reveal">
 
           <div class="page-kicker">
-            PINNACLE INSIGHTS / 01
+            PINNACLE EDUCATION / 01
           </div>
+
 
           <h1>
             Build smarter.<br>
@@ -170,9 +895,12 @@
 
 
         <p class="reveal delay-1">
-          Real estate insights, market analysis and practical guides from
-          Pinnacle Realty for buyers, sellers, investors and agents across
-          the Greater Toronto Area.
+
+          Real estate insights, educational videos, market analysis
+          and practical guides from Pinnacle Realty for buyers,
+          sellers, investors and agents across the Greater Toronto
+          Area.
+
         </p>
 
       </div>
@@ -180,7 +908,94 @@
     </section>
 
 
-    <!-- LATEST INSIGHTS -->
+
+    <!-- ======================================================
+         VIDEO EDUCATION
+    ====================================================== -->
+
+    <section class="education-video-section">
+
+      <div class="container">
+
+        <div class="education-video-heading">
+
+          <div>
+
+            <div class="education-video-number">
+              01/<span>Video Education</span>
+            </div>
+
+
+            <h2>
+              Watch. Learn.<br>
+              <em>Move smarter.</em>
+            </h2>
+
+          </div>
+
+
+          <p>
+
+            Practical real estate education, market conversations
+            and insights from Pinnacle Realty. Select a video to
+            watch without leaving the site.
+
+          </p>
+
+        </div>
+
+
+
+        <!-- VIDEO GRID -->
+
+        <div
+          id="education-video-grid"
+          class="education-video-grid"
+        >
+
+          <div class="education-video-state">
+
+            <div>
+
+              <div class="education-loader"></div>
+
+              Loading education videos...
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- LOAD MORE -->
+
+        <div
+          id="education-load-more-wrap"
+          class="education-load-more-wrap"
+        >
+
+          <button
+            id="education-load-more"
+            class="education-load-more"
+            type="button"
+          >
+            Load More
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ======================================================
+         LATEST ARTICLES
+    ====================================================== -->
+
     <section class="section section-light">
 
       <div class="container section-head split reveal">
@@ -188,8 +1003,9 @@
         <div>
 
           <div class="section-number">
-            01/<span>Latest Insights</span>
+            02/<span>Latest Insights</span>
           </div>
+
 
           <h2>
             Latest from<br>
@@ -200,21 +1016,28 @@
 
 
         <p class="head-side">
-          Explore our latest market insights, investment guides and real estate
-          strategies covering Brampton, Mississauga, Toronto and the wider GTA.
+
+          Explore our latest market insights, investment guides and
+          real estate strategies covering Brampton, Mississauga,
+          Toronto and the wider GTA.
+
         </p>
 
       </div>
 
 
+
       <!-- BLOG GRID -->
+
       <div class="container blog-grid">
 
 
         <!-- ARTICLE 1 -->
+
         <article class="blog-card reveal">
 
           <div class="blog-thumb"></div>
+
 
           <div class="blog-body">
 
@@ -222,15 +1045,21 @@
               SEP 9, 2026 · 18 MIN READ
             </div>
 
+
             <h3>
               Navigating the Risks of Buying Pre-Construction Condos in the GTA
             </h3>
 
+
             <p>
-              Learn how to evaluate developers, manage levies, prepare for
-              construction delays and reduce the financial risks associated
-              with buying pre-construction condos.
+
+              Learn how to evaluate developers, manage levies,
+              prepare for construction delays and reduce the
+              financial risks associated with buying
+              pre-construction condos.
+
             </p>
+
 
             <a
               class="read"
@@ -246,10 +1075,13 @@
         </article>
 
 
+
         <!-- ARTICLE 2 -->
+
         <article class="blog-card reveal delay-1">
 
           <div class="blog-thumb"></div>
+
 
           <div class="blog-body">
 
@@ -257,15 +1089,23 @@
               SEP 8, 2026 · 17 MIN READ
             </div>
 
+
             <h3>
-              Assignment Sales Brampton Explained: A Sophisticated Guide to GTA Real Estate Transitions
+
+              Assignment Sales Brampton Explained: A Sophisticated
+              Guide to GTA Real Estate Transitions
+
             </h3>
 
+
             <p>
-              A guide to assignment sales in Brampton covering HST rebates,
-              legal considerations, taxes and transferring a pre-construction
-              purchase before final closing.
+
+              A guide to assignment sales in Brampton covering HST
+              rebates, legal considerations, taxes and transferring
+              a pre-construction purchase before final closing.
+
             </p>
+
 
             <a
               class="read"
@@ -281,10 +1121,13 @@
         </article>
 
 
+
         <!-- ARTICLE 3 -->
+
         <article class="blog-card reveal delay-2">
 
           <div class="blog-thumb"></div>
+
 
           <div class="blog-body">
 
@@ -292,15 +1135,24 @@
               SEP 7, 2026 · 17 MIN READ
             </div>
 
+
             <h3>
-              Strategic Investing in Brampton Pre-Construction: The 2026 Investor’s Masterclass
+
+              Strategic Investing in Brampton Pre-Construction:
+              The 2026 Investor’s Masterclass
+
             </h3>
 
+
             <p>
-              Explore strategic approaches to Brampton pre-construction,
-              including deposits, VIP access and identifying developments
-              positioned for long-term growth.
+
+              Explore strategic approaches to Brampton
+              pre-construction, including deposits, VIP access and
+              identifying developments positioned for long-term
+              growth.
+
             </p>
+
 
             <a
               class="read"
@@ -316,10 +1168,13 @@
         </article>
 
 
+
         <!-- ARTICLE 4 -->
+
         <article class="blog-card reveal">
 
           <div class="blog-thumb"></div>
+
 
           <div class="blog-body">
 
@@ -327,15 +1182,24 @@
               SEP 6, 2026 · 17 MIN READ
             </div>
 
+
             <h3>
-              New Condo Developments in Brampton 2026: The Comprehensive Investor Guide
+
+              New Condo Developments in Brampton 2026:
+              The Comprehensive Investor Guide
+
             </h3>
 
+
             <p>
-              Discover new Brampton condo developments, emerging growth areas
-              and how major transit projects may influence future property
-              demand and investment opportunities.
+
+              Discover new Brampton condo developments, emerging
+              growth areas and how major transit projects may
+              influence future property demand and investment
+              opportunities.
+
             </p>
+
 
             <a
               class="read"
@@ -351,10 +1215,13 @@
         </article>
 
 
+
         <!-- ARTICLE 5 -->
+
         <article class="blog-card reveal delay-1">
 
           <div class="blog-thumb"></div>
+
 
           <div class="blog-body">
 
@@ -362,15 +1229,23 @@
               SEP 5, 2026 · 17 MIN READ
             </div>
 
+
             <h3>
-              The Future of Urban Living: Pre-Construction Condos in Brampton
+
+              The Future of Urban Living:
+              Pre-Construction Condos in Brampton
+
             </h3>
 
+
             <p>
-              Explore how transit investment, HST rebates and growing
-              neighbourhoods are shaping the future of pre-construction
-              condominium living in Brampton.
+
+              Explore how transit investment, HST rebates and
+              growing neighbourhoods are shaping the future of
+              pre-construction condominium living in Brampton.
+
             </p>
+
 
             <a
               class="read"
@@ -386,10 +1261,13 @@
         </article>
 
 
+
         <!-- ARTICLE 6 -->
+
         <article class="blog-card reveal delay-2">
 
           <div class="blog-thumb"></div>
+
 
           <div class="blog-body">
 
@@ -397,15 +1275,21 @@
               SEP 4, 2026 · 16 MIN READ
             </div>
 
+
             <h3>
-              Condos for Sale in Mississauga: Urban Sophistication Guide
+              Condos for Sale in Mississauga:
+              Urban Sophistication Guide
             </h3>
 
+
             <p>
-              A guide to Mississauga's condo market covering location,
-              architecture, lifestyle, value and long-term investment
-              considerations.
+
+              A guide to Mississauga's condo market covering
+              location, architecture, lifestyle, value and
+              long-term investment considerations.
+
             </p>
+
 
             <a
               class="read"
@@ -423,10 +1307,15 @@
       </div>
 
 
-      <!-- VIEW ALL BLOGS -->
+
+      <!-- VIEW ALL -->
+
       <div
         class="container reveal"
-        style="text-align:center; margin-top:60px;"
+        style="
+          text-align:center;
+          margin-top:60px;
+        "
       >
 
         <a
@@ -443,7 +1332,11 @@
     </section>
 
 
-    <!-- FEATURED TOPIC -->
+
+    <!-- ======================================================
+         EXPLORE
+    ====================================================== -->
+
     <section class="section section-dark">
 
       <div class="container section-head split reveal">
@@ -451,8 +1344,9 @@
         <div>
 
           <div class="section-number light">
-            02/<span>Explore Pinnacle</span>
+            03/<span>Explore Pinnacle</span>
           </div>
+
 
           <h2>
             Knowledge that<br>
@@ -463,16 +1357,20 @@
 
 
         <p class="head-side light-copy">
-          From neighbourhood guides to investment strategy, Pinnacle Realty
-          provides the insight needed to make informed real estate decisions.
+
+          From neighbourhood guides to investment strategy,
+          Pinnacle Realty provides the insight needed to make
+          informed real estate decisions.
+
         </p>
 
       </div>
 
 
+
       <div class="container card-grid">
 
-        <!-- CARD 1 -->
+
         <article class="info-card dark reveal">
 
           <span class="card-index">
@@ -490,7 +1388,7 @@
         </article>
 
 
-        <!-- CARD 2 -->
+
         <article class="info-card dark reveal delay-1">
 
           <span class="card-index">
@@ -508,7 +1406,7 @@
         </article>
 
 
-        <!-- CARD 3 -->
+
         <article class="info-card dark reveal delay-2">
 
           <span class="card-index">
@@ -526,7 +1424,7 @@
         </article>
 
 
-        <!-- CARD 4 -->
+
         <article class="info-card dark reveal">
 
           <span class="card-index">
@@ -544,7 +1442,7 @@
         </article>
 
 
-        <!-- CARD 5 -->
+
         <article class="info-card dark reveal delay-1">
 
           <span class="card-index">
@@ -562,7 +1460,7 @@
         </article>
 
 
-        <!-- CARD 6 -->
+
         <article class="info-card dark reveal delay-2">
 
           <span class="card-index">
@@ -584,7 +1482,11 @@
     </section>
 
 
-    <!-- FINAL CTA -->
+
+    <!-- ======================================================
+         CTA
+    ====================================================== -->
+
     <section class="cta-band">
 
       <div class="container cta-grid">
@@ -618,7 +1520,11 @@
   </main>
 
 
-  <!-- FOOTER -->
+
+  <!-- ======================================================
+       FOOTER
+  ====================================================== -->
+
   <footer class="site-footer">
 
     <div class="container footer-grid">
@@ -631,18 +1537,29 @@
         >
 
           <span class="brand-copy">
-            <strong>PINNΛCLE</strong>
-            <small>REALTY</small>
+
+            <strong>
+              PINNΛCLE
+            </strong>
+
+            <small>
+              REALTY
+            </small>
+
           </span>
 
         </a>
 
 
         <p>
-          A modern brokerage platform for ambitious real estate professionals.
+
+          A modern brokerage platform for ambitious real estate
+          professionals.
+
         </p>
 
       </div>
+
 
 
       <div class="footer-links">
@@ -651,13 +1568,11 @@
           Home
         </a>
 
-        <a href="success-stories.html">
-          Success Stories
-        </a>
 
         <a href="blog.html">
-          Blog
+          Education
         </a>
+
 
         <a
           href="https://blogs.pinnaclerealty.ca/"
@@ -666,6 +1581,7 @@
         >
           Pinnacle Insights
         </a>
+
 
         <a
           href="https://calendly.com/jag-pinnaclerealty"
@@ -678,6 +1594,7 @@
       </div>
 
     </div>
+
 
 
     <div class="container footer-bottom">
@@ -695,7 +1612,679 @@
   </footer>
 
 
+
+  <!-- ======================================================
+       VIDEO POPUP
+  ====================================================== -->
+
+  <div
+    id="education-video-modal"
+    class="education-modal"
+    aria-hidden="true"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="education-modal-title"
+  >
+
+    <div
+      class="education-modal-backdrop"
+      data-close-video-modal
+    ></div>
+
+
+    <div class="education-modal-dialog">
+
+      <div class="education-modal-top">
+
+        <div class="education-modal-copy">
+
+          <span class="education-modal-kicker">
+            PINNACLE EDUCATION
+          </span>
+
+          <h2
+            id="education-modal-title"
+            class="education-modal-title"
+          >
+            Video
+          </h2>
+
+        </div>
+
+
+        <button
+          id="education-modal-close"
+          class="education-modal-close"
+          type="button"
+          aria-label="Close video"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div class="education-modal-player">
+
+        <iframe
+          id="education-youtube-player"
+          src=""
+          title="Pinnacle Realty education video"
+          allow="
+            accelerometer;
+            autoplay;
+            clipboard-write;
+            encrypted-media;
+            gyroscope;
+            picture-in-picture;
+            web-share
+          "
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ======================================================
+       SCRIPTS
+  ====================================================== -->
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+  ></script>
+
+
+  <script src="supabase.js"></script>
+
   <script src="script.js"></script>
+
+
+
+  <!-- ======================================================
+       EDUCATION VIDEO LOGIC
+  ====================================================== -->
+
+  <script>
+
+    /* ====================================================
+       ELEMENTS
+    ==================================================== */
+
+    const educationGrid =
+      document.getElementById(
+        "education-video-grid"
+      );
+
+
+    const loadMoreWrap =
+      document.getElementById(
+        "education-load-more-wrap"
+      );
+
+
+    const loadMoreButton =
+      document.getElementById(
+        "education-load-more"
+      );
+
+
+    const videoModal =
+      document.getElementById(
+        "education-video-modal"
+      );
+
+
+    const videoPlayer =
+      document.getElementById(
+        "education-youtube-player"
+      );
+
+
+    const videoModalTitle =
+      document.getElementById(
+        "education-modal-title"
+      );
+
+
+    const videoModalClose =
+      document.getElementById(
+        "education-modal-close"
+      );
+
+
+
+    /* ====================================================
+       VIDEO PAGINATION
+    ==================================================== */
+
+    const VIDEOS_PER_PAGE = 3;
+
+    let educationVideos = [];
+
+    let visibleVideoCount =
+      VIDEOS_PER_PAGE;
+
+
+
+    /* ====================================================
+       LOAD VIDEOS FROM SUPABASE
+    ==================================================== */
+
+    async function loadEducationVideos(){
+
+      const {
+        data,
+        error
+      } = await db
+        .from("education_videos")
+        .select(
+          `
+            id,
+            youtube_id,
+            youtube_url,
+            title,
+            thumbnail_url,
+            created_at
+          `
+        )
+        .order(
+          "created_at",
+          {
+            ascending:false
+          }
+        );
+
+
+      if(error){
+
+        console.error(
+          "Unable to load Education videos:",
+          error
+        );
+
+
+        educationGrid.innerHTML = `
+
+          <div class="education-video-state">
+
+            We couldn't load the videos right now.
+            Please try again later.
+
+          </div>
+
+        `;
+
+
+        loadMoreWrap.classList.remove(
+          "visible"
+        );
+
+
+        return;
+
+      }
+
+
+      educationVideos =
+        Array.isArray(data)
+          ? data
+          : [];
+
+
+      if(
+        educationVideos.length === 0
+      ){
+
+        educationGrid.innerHTML = `
+
+          <div class="education-video-state">
+
+            New education videos are coming soon.
+
+          </div>
+
+        `;
+
+
+        loadMoreWrap.classList.remove(
+          "visible"
+        );
+
+
+        return;
+
+      }
+
+
+      renderEducationVideos();
+
+    }
+
+
+
+    /* ====================================================
+       RENDER VIDEOS
+    ==================================================== */
+
+    function renderEducationVideos(){
+
+      const visibleVideos =
+        educationVideos.slice(
+          0,
+          visibleVideoCount
+        );
+
+
+      educationGrid.innerHTML =
+        visibleVideos
+          .map(
+            (video,index) => {
+
+              const delay =
+                (index % 3) * 80;
+
+
+              return `
+
+                <article
+                  class="education-video-card"
+                  data-video-id="${escapeEducationHtml(video.youtube_id)}"
+                  data-video-title="${escapeEducationHtml(video.title)}"
+                  tabindex="0"
+                  role="button"
+                  aria-label="Play ${escapeEducationHtml(video.title)}"
+                  style="
+                    animation-delay:
+                    ${delay}ms;
+                  "
+                >
+
+                  <div class="education-video-thumb">
+
+                    <img
+                      src="${escapeEducationHtml(video.thumbnail_url)}"
+                      alt="${escapeEducationHtml(video.title)}"
+                      loading="lazy"
+                    >
+
+
+                    <button
+                      class="education-play"
+                      type="button"
+                      tabindex="-1"
+                      aria-hidden="true"
+                    >
+
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+
+                        <path
+                          d="M8 5v14l11-7z"
+                        />
+
+                      </svg>
+
+                    </button>
+
+                  </div>
+
+
+                  <div class="education-video-content">
+
+                    <span class="education-video-label">
+                      PINNACLE VIDEO
+                    </span>
+
+
+                    <h3>
+                      ${escapeEducationHtml(video.title)}
+                    </h3>
+
+
+                    <div class="education-video-action">
+                      Watch video
+                      <span>↗</span>
+                    </div>
+
+                  </div>
+
+                </article>
+
+              `;
+
+            }
+          )
+          .join("");
+
+
+      attachEducationVideoEvents();
+
+
+      if(
+        visibleVideoCount <
+        educationVideos.length
+      ){
+
+        loadMoreWrap.classList.add(
+          "visible"
+        );
+
+      }
+
+      else{
+
+        loadMoreWrap.classList.remove(
+          "visible"
+        );
+
+      }
+
+    }
+
+
+
+    /* ====================================================
+       CLICK / KEYBOARD EVENTS
+    ==================================================== */
+
+    function attachEducationVideoEvents(){
+
+      document
+        .querySelectorAll(
+          ".education-video-card"
+        )
+        .forEach(
+          card => {
+
+            card.addEventListener(
+              "click",
+              () => {
+
+                openEducationVideo(
+                  card.dataset.videoId,
+                  card.dataset.videoTitle
+                );
+
+              }
+            );
+
+
+            card.addEventListener(
+              "keydown",
+              event => {
+
+                if(
+                  event.key === "Enter" ||
+                  event.key === " "
+                ){
+
+                  event.preventDefault();
+
+
+                  openEducationVideo(
+                    card.dataset.videoId,
+                    card.dataset.videoTitle
+                  );
+
+                }
+
+              }
+            );
+
+          }
+        );
+
+    }
+
+
+
+    /* ====================================================
+       LOAD MORE
+    ==================================================== */
+
+    loadMoreButton.addEventListener(
+      "click",
+      () => {
+
+        loadMoreButton.disabled =
+          true;
+
+
+        loadMoreButton.textContent =
+          "Loading...";
+
+
+        setTimeout(
+          () => {
+
+            visibleVideoCount +=
+              VIDEOS_PER_PAGE;
+
+
+            renderEducationVideos();
+
+
+            loadMoreButton.disabled =
+              false;
+
+
+            loadMoreButton.textContent =
+              "Load More";
+
+          },
+          180
+        );
+
+      }
+    );
+
+
+
+    /* ====================================================
+       OPEN VIDEO MODAL
+    ==================================================== */
+
+    function openEducationVideo(
+      videoId,
+      title
+    ){
+
+      if(!videoId){
+        return;
+      }
+
+
+      videoModalTitle.textContent =
+        title || "Pinnacle Education";
+
+
+      videoPlayer.src =
+        "https://www.youtube.com/embed/" +
+        encodeURIComponent(videoId) +
+        "?autoplay=1&rel=0&modestbranding=1";
+
+
+      videoModal.classList.add(
+        "open"
+      );
+
+
+      videoModal.setAttribute(
+        "aria-hidden",
+        "false"
+      );
+
+
+      document.body.style.overflow =
+        "hidden";
+
+
+      setTimeout(
+        () => {
+
+          videoModalClose.focus();
+
+        },
+        200
+      );
+
+    }
+
+
+
+    /* ====================================================
+       CLOSE VIDEO MODAL
+    ==================================================== */
+
+    function closeEducationVideo(){
+
+      if(
+        !videoModal.classList.contains(
+          "open"
+        )
+      ){
+        return;
+      }
+
+
+      videoModal.classList.remove(
+        "open"
+      );
+
+
+      videoModal.setAttribute(
+        "aria-hidden",
+        "true"
+      );
+
+
+      document.body.style.overflow =
+        "";
+
+
+      /*
+        Clearing the iframe stops the
+        YouTube video/audio completely.
+      */
+
+      setTimeout(
+        () => {
+
+          videoPlayer.src = "";
+
+          videoModalTitle.textContent =
+            "Video";
+
+        },
+        250
+      );
+
+    }
+
+
+
+    /* ====================================================
+       MODAL CLOSE EVENTS
+    ==================================================== */
+
+    videoModalClose.addEventListener(
+      "click",
+      closeEducationVideo
+    );
+
+
+    document
+      .querySelectorAll(
+        "[data-close-video-modal]"
+      )
+      .forEach(
+        element => {
+
+          element.addEventListener(
+            "click",
+            closeEducationVideo
+          );
+
+        }
+      );
+
+
+    document.addEventListener(
+      "keydown",
+      event => {
+
+        if(
+          event.key === "Escape" &&
+          videoModal.classList.contains(
+            "open"
+          )
+        ){
+
+          closeEducationVideo();
+
+        }
+
+      }
+    );
+
+
+
+    /* ====================================================
+       HTML ESCAPING
+    ==================================================== */
+
+    function escapeEducationHtml(
+      value
+    ){
+
+      return String(
+        value ?? ""
+      )
+
+        .replaceAll(
+          "&",
+          "&amp;"
+        )
+
+        .replaceAll(
+          "<",
+          "&lt;"
+        )
+
+        .replaceAll(
+          ">",
+          "&gt;"
+        )
+
+        .replaceAll(
+          '"',
+          "&quot;"
+        )
+
+        .replaceAll(
+          "'",
+          "&#039;"
+        );
+
+    }
+
+
+
+    /* ====================================================
+       START
+    ==================================================== */
+
+    loadEducationVideos();
+
+  </script>
 
 </body>
 

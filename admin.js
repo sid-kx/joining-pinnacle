@@ -146,9 +146,7 @@ form.addEventListener("submit", async event => {
     } = await db.functions.invoke(
       "dynamic-processor",
       {
-        body: {
-          url
-        }
+        body: { url }
       }
     );
 
