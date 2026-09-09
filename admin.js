@@ -144,7 +144,7 @@ form.addEventListener("submit", async event => {
       data,
       error
     } = await db.functions.invoke(
-      "add-youtube-video",
+      "dynamic-processor",
       {
         body: {
           url
