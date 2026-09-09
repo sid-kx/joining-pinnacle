@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <title>Pinnacle Admin Login</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body{
+      min-height:100vh;
+      background:#0d0e0f;
+      color:white;
+      display:grid;
+      place-items:center;
+      padding:30px;
+    }
+
+    .admin-login-card{
+      width:min(430px,100%);
+      background:#151719;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:22px;
+      padding:36px;
+    }
+
+    .admin-login-card h1{
+      font-size:36px;
+      margin-bottom:10px;
+    }
+
+    .admin-login-card p{
+      color:#aaa;
+      margin-bottom:28px;
+    }
+
+    .admin-login-card form{
+      display:grid;
+      gap:16px;
+    }
+
+    .admin-login-card input{
+      width:100%;
+      padding:15px 16px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.15);
+      background:#0d0e0f;
+      color:white;
+      font:inherit;
+    }
+
+    .admin-login-card button{
+      padding:15px 18px;
+      border:0;
+      border-radius:999px;
+      background:#c7a35d;
+      color:#111;
+      font-weight:800;
+      cursor:pointer;
+    }
+
+    #login-error{
+      color:#ff8a8a;
+      min-height:24px;
+      margin-top:14px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="admin-login-card">
+
+    <div style="font-size:11px;letter-spacing:.14em;color:#c7a35d;margin-bottom:12px;">
+      PINNACLE REALTY
+    </div>
+
+    <h1>Admin Access</h1>
+
+    <p>
+      Sign in to manage education videos.
+    </p>
+
+    <form id="login-form">
+
+      <input
+        id="email"
+        type="email"
+        placeholder="Email"
+        autocomplete="email"
+        required
+      >
+
+      <input
+        id="password"
+        type="password"
+        placeholder="Password"
+        autocomplete="current-password"
+        required
+      >
+
+      <button type="submit">
+        Sign In
+      </button>
+
+    </form>
+
+    <div id="login-error"></div>
+
+  </main>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const errorBox = document.getElementById("login-error");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      errorBox.textContent = "";
+
+      const email =
+        document.getElementById("email").value.trim();
+
+      const password =
+        document.getElementById("password").value;
+
+      const { data, error } =
+        await db.auth.signInWithPassword({
+          email,
+          password
+        });
+
+      if (error) {
+        errorBox.textContent = "Incorrect email or password.";
+        return;
+      }
+
+      if (!data.user) {
+        errorBox.textContent = "Unable to sign in.";
+        return;
+      }
+
+      const { data: adminRow, error: adminError } =
+        await db
+          .from("education_admins")
+          .select("user_id")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+
+      if (adminError || !adminRow) {
+        await db.auth.signOut();
+
+        errorBox.textContent =
+          "This account does not have Education admin access.";
+
+        return;
+      }
+
+      window.location.href = "admin.html";
+    });
+  </script>
+
+</body>
+
+</html>

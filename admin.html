@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <title>Pinnacle Education Admin</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body{
+      min-height:100vh;
+      background:#0d0e0f;
+      color:white;
+    }
+
+    .admin-shell{
+      width:min(1100px,calc(100% - 40px));
+      margin:auto;
+      padding:70px 0;
+    }
+
+    .admin-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:20px;
+      margin-bottom:45px;
+    }
+
+    .admin-top small{
+      display:block;
+      color:#c7a35d;
+      letter-spacing:.14em;
+      margin-bottom:8px;
+    }
+
+    .admin-top h1{
+      font-size:clamp(38px,6vw,64px);
+    }
+
+    .logout-btn{
+      background:none;
+      border:1px solid rgba(255,255,255,.2);
+      color:white;
+      padding:12px 18px;
+      border-radius:999px;
+      cursor:pointer;
+    }
+
+    .add-panel{
+      border:1px solid rgba(255,255,255,.12);
+      background:#151719;
+      border-radius:20px;
+      padding:28px;
+      margin-bottom:45px;
+    }
+
+    .add-panel h2{
+      font-size:28px;
+      margin-bottom:8px;
+    }
+
+    .add-panel p{
+      color:#999;
+      margin-bottom:22px;
+    }
+
+    .video-form{
+      display:flex;
+      gap:12px;
+    }
+
+    .video-form input{
+      flex:1;
+      padding:15px 17px;
+      border:1px solid rgba(255,255,255,.15);
+      border-radius:12px;
+      background:#0d0e0f;
+      color:white;
+      font:inherit;
+    }
+
+    .video-form button{
+      padding:15px 22px;
+      border:0;
+      background:#c7a35d;
+      color:#111;
+      border-radius:999px;
+      font-weight:800;
+      cursor:pointer;
+    }
+
+    #admin-message{
+      min-height:22px;
+      margin-top:15px;
+      color:#c7a35d;
+    }
+
+    .admin-video-list{
+      display:grid;
+      gap:16px;
+    }
+
+    .admin-video{
+      display:grid;
+      grid-template-columns:180px 1fr auto;
+      align-items:center;
+      gap:20px;
+      padding:15px;
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:16px;
+      background:#151719;
+    }
+
+    .admin-video img{
+      width:180px;
+      aspect-ratio:16/9;
+      object-fit:cover;
+      border-radius:10px;
+    }
+
+    .admin-video h3{
+      font-size:18px;
+      margin-bottom:6px;
+    }
+
+    .admin-video a{
+      color:#999;
+      font-size:12px;
+    }
+
+    .delete-video{
+      border:1px solid rgba(255,100,100,.35);
+      background:none;
+      color:#ff8c8c;
+      padding:10px 15px;
+      border-radius:999px;
+      cursor:pointer;
+    }
+
+    .empty-state{
+      color:#777;
+      border:1px dashed rgba(255,255,255,.15);
+      border-radius:16px;
+      padding:30px;
+      text-align:center;
+    }
+
+    @media(max-width:700px){
+      .video-form{
+        flex-direction:column;
+      }
+
+      .admin-video{
+        grid-template-columns:1fr;
+      }
+
+      .admin-video img{
+        width:100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="admin-shell">
+
+    <div class="admin-top">
+
+      <div>
+        <small>PINNACLE REALTY</small>
+        <h1>Education Manager</h1>
+      </div>
+
+      <button
+        id="logout"
+        class="logout-btn"
+      >
+        Log Out
+      </button>
+
+    </div>
+
+
+    <section class="add-panel">
+
+      <h2>Add a YouTube video</h2>
+
+      <p>
+        Paste the YouTube URL. The title and thumbnail will be retrieved automatically.
+      </p>
+
+      <form
+        id="video-form"
+        class="video-form"
+      >
+
+        <input
+          id="youtube-url"
+          type="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          required
+        >
+
+        <button type="submit">
+          Add Video
+        </button>
+
+      </form>
+
+      <div id="admin-message"></div>
+
+    </section>
+
+
+    <section>
+
+      <h2 style="margin-bottom:20px;">
+        Published Videos
+      </h2>
+
+      <div
+        id="admin-video-list"
+        class="admin-video-list"
+      ></div>
+
+    </section>
+
+  </main>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="admin.js"></script>
+
+</body>
+
+</html>

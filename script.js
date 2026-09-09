@@ -5,3 +5,21 @@ document.querySelectorAll('.counter').forEach(el=>{const target=+el.dataset.targ
 document.querySelectorAll('.faq-q').forEach(btn=>btn.addEventListener('click',()=>btn.closest('.faq-item').classList.toggle('open')));
 document.querySelectorAll('[data-drag-scroll]').forEach(rail=>{let down=false,startX,scrollLeft;rail.addEventListener('mousedown',e=>{down=true;startX=e.pageX-rail.offsetLeft;scrollLeft=rail.scrollLeft;rail.style.cursor='grabbing'});['mouseleave','mouseup'].forEach(ev=>rail.addEventListener(ev,()=>{down=false;rail.style.cursor='grab'}));rail.addEventListener('mousemove',e=>{if(!down)return;e.preventDefault();const x=e.pageX-rail.offsetLeft;rail.scrollLeft=scrollLeft-(x-startX)*1.3})});
 const form=document.querySelector('#join-form');if(form)form.addEventListener('submit',e=>{e.preventDefault();const msg=form.querySelector('.form-note');msg.textContent='Thanks — your demo submission was captured locally. Connect this form to your CRM or form endpoint before launch.';msg.style.color='#c7a35d';form.reset()});
+document.addEventListener("keydown", event => {
+
+  const modifier =
+    event.ctrlKey ||
+    event.metaKey;
+
+  if (
+    modifier &&
+    event.shiftKey &&
+    event.key.toLowerCase() === "o"
+  ) {
+
+    event.preventDefault();
+
+    window.location.href = "login.html";
+  }
+
+});
