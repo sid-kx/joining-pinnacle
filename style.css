@@ -49,3 +49,45 @@ a,button,input,select,textarea{-webkit-tap-highlight-color:transparent}
 .hero-card,.apply-card,.admin-login-card,.add-panel,.admin-video{box-shadow:0 24px 70px rgba(0,0,0,.22)}
 @media(max-width:900px){.mobile-menu{border-top:1px solid rgba(255,255,255,.13)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}.cursor-glow{display:none}}
+
+/* Testimonials */
+.testimonials{padding:90px 0;border-top:1px solid var(--line-dark);border-bottom:1px solid var(--line-dark)}
+.testimonials-top{margin-bottom:34px}
+.testimonials-top h2{font-size:clamp(42px,5vw,70px);line-height:.96}
+.testimonial-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.testimonial-state{grid-column:1/-1;border:1px dashed rgba(255,255,255,.16);border-radius:18px;padding:34px;color:#858789;text-align:center}
+.testimonial-post{border:1px solid rgba(255,255,255,.12);border-radius:18px;overflow:hidden;background:rgba(255,255,255,.045);cursor:pointer;box-shadow:0 24px 70px rgba(0,0,0,.16);transition:transform .28s cubic-bezier(.2,.7,.2,1),border-color .22s ease,box-shadow .28s ease}
+.testimonial-post:hover{transform:translateY(-5px);border-color:rgba(199,163,93,.44);box-shadow:0 28px 90px rgba(0,0,0,.30)}
+.testimonial-media{aspect-ratio:16/10;background:linear-gradient(145deg,#202326,#0f1011);display:grid;place-items:center;overflow:hidden}
+.testimonial-media img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.testimonial-post:hover .testimonial-media img{transform:scale(1.04)}
+.testimonial-media.empty span{font:800 80px/1 Manrope;color:rgba(199,163,93,.74)}
+.testimonial-copy{padding:22px}
+.testimonial-copy span{display:block;margin-bottom:12px;font:9px "DM Mono",monospace;letter-spacing:.13em;color:var(--gold)}
+.testimonial-copy h3{font-size:24px;line-height:1.1;color:#fff}
+.testimonial-copy p{margin:14px 0 0;color:#aaa;font-size:13px}
+.testimonial-copy strong{display:inline-block;margin-top:18px;color:var(--gold2);font-size:12px}
+.testimonial-load-more-wrap{display:none;justify-content:center;margin-top:38px}
+.testimonial-load-more-wrap.visible{display:flex}
+.testimonial-load-more{border:0;border-radius:999px;padding:15px 25px;background:var(--gold);color:#111;font:800 13px Inter,sans-serif;cursor:pointer;transition:background .22s ease,transform .28s cubic-bezier(.2,.7,.2,1),box-shadow .28s ease}
+.testimonial-load-more:hover{background:var(--gold2);transform:translateY(-2px);box-shadow:0 16px 42px rgba(0,0,0,.20)}
+.testimonial-modal{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:26px;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .28s ease,visibility .28s ease}
+.testimonial-modal.open{opacity:1;visibility:visible;pointer-events:auto}
+.testimonial-modal-backdrop{position:absolute;inset:0;background:rgba(3,4,5,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.testimonial-modal-card{position:relative;z-index:1;width:min(980px,100%);max-height:min(86vh,900px);overflow:auto;border:1px solid rgba(255,255,255,.14);border-radius:22px;background:#111315;color:#fff;padding:34px;box-shadow:0 34px 120px rgba(0,0,0,.62)}
+.testimonial-modal-card h2{max-width:800px;padding-right:48px;font-size:40px;line-height:1.15;overflow-wrap:anywhere}
+.testimonial-modal-close{position:absolute;top:20px;right:20px;width:44px;height:44px;border:1px solid rgba(255,255,255,.18);border-radius:50%;background:rgba(255,255,255,.05);color:#fff;font-size:26px;cursor:pointer}
+.testimonial-modal-body{margin-top:26px;display:grid;gap:28px;min-width:0}
+.testimonial-modal-body p{max-width:760px;margin:0;white-space:pre-line;color:#c8c8c8;line-height:1.8;overflow-wrap:anywhere}
+.testimonial-video{aspect-ratio:16/9;overflow:hidden;border-radius:8px;background:#000}
+.testimonial-video iframe{width:100%;height:100%;border:0;display:block}
+.testimonial-carousel{min-width:0}
+.testimonial-carousel-stage{height:min(440px,48vh);overflow:hidden;border:1px solid rgba(199,163,93,.18);border-radius:8px;background:#090b0c}
+.testimonial-carousel-stage img{display:block;width:100%;height:100%;object-fit:contain}
+.testimonial-carousel-controls{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:12px;min-height:44px}
+.testimonial-carousel-controls button{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid rgba(199,163,93,.45);border-radius:50%;background:transparent;color:var(--gold2);font-size:24px;line-height:1;cursor:pointer;transition:background .2s ease,border-color .2s ease}
+.testimonial-carousel-controls button:hover{background:rgba(199,163,93,.12);border-color:var(--gold)}
+.testimonial-carousel-controls button:focus-visible{outline:2px solid var(--gold2);outline-offset:3px}
+.testimonial-carousel-counter{min-width:64px;text-align:center;font:12px "DM Mono",monospace;font-variant-numeric:tabular-nums;letter-spacing:0;color:var(--gold2)}
+@media(max-width:900px){.testimonial-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.testimonials{padding:70px 0}.testimonial-grid{grid-template-columns:1fr}.testimonial-modal{padding:15px}.testimonial-modal-card{padding:26px 20px}.testimonial-modal-card h2{font-size:28px}.testimonial-modal-body{gap:22px}.testimonial-carousel-stage{height:min(320px,42vh)}.testimonial-modal-close{top:14px;right:14px}}

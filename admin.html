@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <title>Pinnacle Education Admin</title>
+  <title>Pinnacle Content Admin</title>
 
   <link rel="stylesheet" href="style.css">
 
@@ -68,13 +68,15 @@
       margin-bottom:22px;
     }
 
-    .video-form{
-      display:flex;
-      gap:12px;
+    .content-form{
+      display:grid;
+      gap:14px;
     }
 
-    .video-form input{
-      flex:1;
+    .content-form input,
+    .content-form textarea{
+      width:100%;
+      min-width:0;
       padding:15px 17px;
       border:1px solid rgba(255,255,255,.15);
       border-radius:12px;
@@ -83,7 +85,13 @@
       font:inherit;
     }
 
-    .video-form button{
+    .content-form textarea{
+      min-height:160px;
+      resize:vertical;
+    }
+
+    .content-form button{
+      justify-self:start;
       padding:15px 22px;
       border:0;
       background:#c7a35d;
@@ -93,20 +101,34 @@
       cursor:pointer;
     }
 
-    #admin-message{
+    .admin-field{
+      display:grid;
+      gap:7px;
+    }
+
+    .admin-field label{
+      color:#aaa;
+      font-size:12px;
+    }
+
+    #admin-message,
+    #testimonial-message{
       min-height:22px;
       margin-top:15px;
       color:#c7a35d;
     }
 
-    .admin-video-list{
+    .admin-video-list,
+    .admin-testimonial-list{
       display:grid;
       gap:16px;
+      margin-top:20px;
     }
 
-    .admin-video{
+    .admin-video,
+    .admin-testimonial{
       display:grid;
-      grid-template-columns:180px 1fr auto;
+      grid-template-columns:120px minmax(0,1fr) auto;
       align-items:center;
       gap:20px;
       padding:15px;
@@ -115,16 +137,32 @@
       background:#151719;
     }
 
-    .admin-video img{
-      width:180px;
-      aspect-ratio:16/9;
+    .admin-video img,
+    .admin-video-placeholder,
+    .admin-testimonial img,
+    .admin-testimonial-thumb{
+      width:120px;
+      aspect-ratio:1;
       object-fit:cover;
       border-radius:10px;
+      background:#0d0e0f;
+      display:grid;
+      place-items:center;
+      color:#c7a35d;
+      font-weight:800;
     }
 
-    .admin-video h3{
+    .admin-video h3,
+    .admin-testimonial h3{
       font-size:18px;
       margin-bottom:6px;
+      overflow-wrap:anywhere;
+    }
+
+    .admin-testimonial p{
+      margin:0;
+      color:#999;
+      font-size:12px;
     }
 
     .admin-video a{
@@ -132,7 +170,8 @@
       font-size:12px;
     }
 
-    .delete-video{
+    .delete-video,
+    .delete-testimonial{
       border:1px solid rgba(255,100,100,.35);
       background:none;
       color:#ff8c8c;
@@ -150,15 +189,15 @@
     }
 
     @media(max-width:700px){
-      .video-form{
-        flex-direction:column;
-      }
-
-      .admin-video{
+      .admin-video,
+      .admin-testimonial{
         grid-template-columns:1fr;
       }
 
-      .admin-video img{
+      .admin-video img,
+      .admin-video-placeholder,
+      .admin-testimonial img,
+      .admin-testimonial-thumb{
         width:100%;
       }
     }
@@ -173,7 +212,7 @@
 
       <div>
         <small>PINNACLE REALTY</small>
-        <h1>Education Manager</h1>
+        <h1>Content Manager</h1>
       </div>
 
       <button
@@ -188,23 +227,50 @@
 
     <section class="add-panel">
 
-      <h2>Add a YouTube video</h2>
+      <h2>Add a Video</h2>
 
-      <p>
-        Paste the YouTube URL. The title and thumbnail will be retrieved automatically.
+      <p id="video-save-note">
+        Add a title, article, optional YouTube link and up to 10 images.
       </p>
 
       <form
         id="video-form"
-        class="video-form"
+        class="content-form"
+        aria-describedby="video-save-note"
       >
 
-        <input
-          id="youtube-url"
-          type="url"
-          placeholder="https://www.youtube.com/watch?v=..."
-          required
-        >
+        <div class="admin-field">
+          <label for="video-title">Title</label>
+          <input
+            id="video-title"
+            type="text"
+            required
+          >
+        </div>
+
+        <div class="admin-field">
+          <label for="video-article">Article</label>
+          <textarea id="video-article"></textarea>
+        </div>
+
+        <div class="admin-field">
+          <label for="youtube-url">YouTube link</label>
+          <input
+            id="youtube-url"
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=..."
+          >
+        </div>
+
+        <div class="admin-field">
+          <label for="video-images">Images (up to 10)</label>
+          <input
+            id="video-images"
+            type="file"
+            accept="image/*"
+            multiple
+          >
+        </div>
 
         <button type="submit">
           Add Video
@@ -212,20 +278,90 @@
 
       </form>
 
-      <div id="admin-message"></div>
+      <div id="admin-message" role="status" aria-live="polite"></div>
 
     </section>
 
 
-    <section>
+    <section class="add-panel">
 
-      <h2 style="margin-bottom:20px;">
-        Published Videos
-      </h2>
+      <h2>Add a Testimonial</h2>
+
+      <p>
+        Add a title, article, optional YouTube link and up to 10 images.
+      </p>
+
+      <form
+        id="testimonial-form"
+        class="content-form"
+      >
+
+        <div class="admin-field">
+          <label for="testimonial-title">Title</label>
+          <input
+            id="testimonial-title"
+            type="text"
+            required
+          >
+        </div>
+
+        <div class="admin-field">
+          <label for="testimonial-article">Article</label>
+          <textarea
+            id="testimonial-article"
+            required
+          ></textarea>
+        </div>
+
+        <div class="admin-field">
+          <label for="testimonial-youtube-url">YouTube link</label>
+          <input
+            id="testimonial-youtube-url"
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=..."
+          >
+        </div>
+
+        <div class="admin-field">
+          <label for="testimonial-images">Images</label>
+          <input
+            id="testimonial-images"
+            type="file"
+            accept="image/*"
+            multiple
+          >
+        </div>
+
+        <button type="submit">
+          Add Testimonial
+        </button>
+
+      </form>
+
+      <div id="testimonial-message"></div>
+
+    </section>
+
+
+    <section class="add-panel">
+
+      <h2>Published Videos</h2>
 
       <div
         id="admin-video-list"
         class="admin-video-list"
+      ></div>
+
+    </section>
+
+
+    <section class="add-panel">
+
+      <h2>Published Testimonials</h2>
+
+      <div
+        id="admin-testimonial-list"
+        class="admin-testimonial-list"
       ></div>
 
     </section>

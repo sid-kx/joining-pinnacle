@@ -216,6 +216,14 @@
         cubic-bezier(.2,.7,.2,1);
     }
 
+    .education-video-placeholder{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      color:#c7a35d;
+      font:800 80px/1 Manrope,sans-serif;
+    }
 
     .education-video-card:hover
     .education-video-thumb img{
@@ -526,7 +534,14 @@
 
       z-index:2;
 
-      width:min(1080px,100%);
+      width:min(980px,100%);
+      max-height:min(86vh,900px);
+      overflow:auto;
+      padding:34px;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:22px;
+      background:#111315;
+      color:#fff;
 
       opacity:0;
 
@@ -591,16 +606,12 @@
     .education-modal-title{
       font-family:Manrope,sans-serif;
 
-      font-size:
-        clamp(
-          19px,
-          2.5vw,
-          29px
-        );
+      font-size:29px;
 
       line-height:1.12;
 
-      letter-spacing:-.035em;
+      letter-spacing:0;
+      overflow-wrap:anywhere;
 
       color:#fff;
 
@@ -663,7 +674,7 @@
         1px solid
         rgba(255,255,255,.12);
 
-      border-radius:18px;
+      border-radius:8px;
 
       background:#000;
 
@@ -682,6 +693,12 @@
       border:0;
     }
 
+    .education-modal-player[hidden]{
+      display:none;
+    }
+    .education-modal-details{
+      display:contents;
+    }
 
 
     /* ======================================================
@@ -730,6 +747,13 @@
         align-items:center;
       }
 
+      .education-modal-dialog{
+        padding:26px 20px;
+      }
+
+      .education-modal-title{
+        font-size:24px;
+      }
 
       .education-modal-close{
         width:42px;
@@ -950,275 +974,6 @@
 
 
     <!-- ======================================================
-         LATEST ARTICLES
-    ====================================================== -->
-
-    <section class="section section-light">
-
-      <div class="container section-head split reveal">
-
-        <div>
-
-          <h2>
-            Articles
-          </h2>
-
-        </div>
-
-      </div>
-
-
-
-      <!-- BLOG GRID -->
-
-      <div class="container blog-grid">
-
-
-        <!-- ARTICLE 1 -->
-
-        <article class="blog-card reveal">
-
-          <div class="blog-thumb"></div>
-
-
-          <div class="blog-body">
-
-            <div class="blog-meta">
-              SEP 9, 2026 · 18 MIN READ
-            </div>
-
-
-            <h3>
-              Navigating the Risks of Buying Pre-Construction Condos in the GTA
-            </h3>
-
-
-            <a
-              class="read"
-              href="https://blogs.pinnaclerealty.ca/post/navigating-the-risks-of-buying-pre-construction-condos-in-the-gta"
-              target="_blank"
-              rel="noopener"
-            >
-              Read
-            </a>
-
-          </div>
-
-        </article>
-
-
-
-        <!-- ARTICLE 2 -->
-
-        <article class="blog-card reveal delay-1">
-
-          <div class="blog-thumb"></div>
-
-
-          <div class="blog-body">
-
-            <div class="blog-meta">
-              SEP 8, 2026 · 17 MIN READ
-            </div>
-
-
-            <h3>
-
-              Assignment Sales Brampton Explained: A Sophisticated
-              Guide to GTA Real Estate Transitions
-
-            </h3>
-
-
-            <a
-              class="read"
-              href="https://blogs.pinnaclerealty.ca/post/assignment-sales-brampton-explained-a-sophisticated-guide-to-gta-real-estate-transitions"
-              target="_blank"
-              rel="noopener"
-            >
-              Read
-            </a>
-
-          </div>
-
-        </article>
-
-
-
-        <!-- ARTICLE 3 -->
-
-        <article class="blog-card reveal delay-2">
-
-          <div class="blog-thumb"></div>
-
-
-          <div class="blog-body">
-
-            <div class="blog-meta">
-              SEP 7, 2026 · 17 MIN READ
-            </div>
-
-
-            <h3>
-
-              Strategic Investing in Brampton Pre-Construction:
-              The 2026 Investor’s Masterclass
-
-            </h3>
-
-
-            <a
-              class="read"
-              href="https://blogs.pinnaclerealty.ca/post/strategic-investing-in-brampton-pre-construction-the-2026-investors-masterclass"
-              target="_blank"
-              rel="noopener"
-            >
-              Read
-            </a>
-
-          </div>
-
-        </article>
-
-
-
-        <!-- ARTICLE 4 -->
-
-        <article class="blog-card reveal">
-
-          <div class="blog-thumb"></div>
-
-
-          <div class="blog-body">
-
-            <div class="blog-meta">
-              SEP 6, 2026 · 17 MIN READ
-            </div>
-
-
-            <h3>
-
-              New Condo Developments in Brampton 2026:
-              The Comprehensive Investor Guide
-
-            </h3>
-
-
-            <a
-              class="read"
-              href="https://blogs.pinnaclerealty.ca/post/new-condo-developments-in-brampton-2026-the-comprehensive-investor-guide"
-              target="_blank"
-              rel="noopener"
-            >
-              Read
-            </a>
-
-          </div>
-
-        </article>
-
-
-
-        <!-- ARTICLE 5 -->
-
-        <article class="blog-card reveal delay-1">
-
-          <div class="blog-thumb"></div>
-
-
-          <div class="blog-body">
-
-            <div class="blog-meta">
-              SEP 5, 2026 · 17 MIN READ
-            </div>
-
-
-            <h3>
-
-              The Future of Urban Living:
-              Pre-Construction Condos in Brampton
-
-            </h3>
-
-
-            <a
-              class="read"
-              href="https://blogs.pinnaclerealty.ca/post/the-future-of-urban-living-pre-construction-condos-in-brampton"
-              target="_blank"
-              rel="noopener"
-            >
-              Read
-            </a>
-
-          </div>
-
-        </article>
-
-
-
-        <!-- ARTICLE 6 -->
-
-        <article class="blog-card reveal delay-2">
-
-          <div class="blog-thumb"></div>
-
-
-          <div class="blog-body">
-
-            <div class="blog-meta">
-              SEP 4, 2026 · 16 MIN READ
-            </div>
-
-
-            <h3>
-              Condos for Sale in Mississauga:
-              Urban Sophistication Guide
-            </h3>
-
-
-            <a
-              class="read"
-              href="https://blogs.pinnaclerealty.ca/post/condos-for-sale-in-mississauga-urban-sophistication-guide"
-              target="_blank"
-              rel="noopener"
-            >
-              Read
-            </a>
-
-          </div>
-
-        </article>
-
-      </div>
-
-
-
-      <!-- VIEW ALL -->
-
-      <div
-        class="container reveal"
-        style="
-          text-align:center;
-          margin-top:60px;
-        "
-      >
-
-        <a
-          href="https://blogs.pinnaclerealty.ca/"
-          target="_blank"
-          rel="noopener"
-          class="btn btn-gold"
-        >
-          More
-        </a>
-
-      </div>
-
-    </section>
-
-
-
-    <!-- ======================================================
          CTA
     ====================================================== -->
 
@@ -1384,24 +1139,30 @@
       </div>
 
 
-      <div class="education-modal-player">
+      <div class="testimonial-modal-body">
 
-        <iframe
-          id="education-youtube-player"
-          src=""
-          title="Pinnacle Realty education video"
-          allow="
-            accelerometer;
-            autoplay;
-            clipboard-write;
-            encrypted-media;
-            gyroscope;
-            picture-in-picture;
-            web-share
-          "
-          referrerpolicy="strict-origin-when-cross-origin"
-          allowfullscreen
-        ></iframe>
+        <div class="education-modal-player">
+
+          <iframe
+            id="education-youtube-player"
+            src=""
+            title="Pinnacle Realty education video"
+            allow="
+              accelerometer;
+              autoplay;
+              clipboard-write;
+              encrypted-media;
+              gyroscope;
+              picture-in-picture;
+              web-share
+            "
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+          ></iframe>
+
+        </div>
+
+        <div id="education-modal-details" class="education-modal-details"></div>
 
       </div>
 
@@ -1465,6 +1226,7 @@
         "education-youtube-player"
       );
 
+    const videoPlayerSection = videoPlayer.parentElement;
 
     const videoModalTitle =
       document.getElementById(
@@ -1477,6 +1239,7 @@
         "education-modal-close"
       );
 
+    const videoModalDetails = document.getElementById("education-modal-details");
 
 
     /* ====================================================
@@ -1509,6 +1272,8 @@
             youtube_id,
             youtube_url,
             title,
+            article,
+            image_urls,
             thumbnail_url,
             created_at
           `
@@ -1592,6 +1357,35 @@
        RENDER VIDEOS
     ==================================================== */
 
+    function getEducationVideoCover(video) {
+      const firstImage = Array.isArray(video.image_urls) ? video.image_urls[0] : null;
+      if (typeof firstImage === "string" && firstImage.trim()) {
+        return firstImage;
+      }
+      // Only old rows need thumbnail_url; new posts use their first uploaded image.
+      return typeof video.thumbnail_url === "string" ? video.thumbnail_url.trim() : "";
+    }
+
+    function getEducationYoutubeId(video) {
+      if (video.youtube_id) {
+        return video.youtube_id;
+      }
+      try {
+        const url = new URL(video.youtube_url);
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (url.hostname === "youtu.be" || url.hostname === "www.youtu.be") {
+          return parts[0] || "";
+        }
+        if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtube-nocookie.com", "www.youtube-nocookie.com"].includes(url.hostname)) {
+          return url.searchParams.get("v") ||
+            (["embed", "shorts", "live"].includes(parts[0]) ? parts[1] || "" : "");
+        }
+      } catch {
+        return "";
+      }
+      return "";
+    }
+
     function renderEducationVideos(){
 
       const visibleVideos =
@@ -1606,6 +1400,9 @@
           .map(
             (video,index) => {
 
+              const cover = getEducationVideoCover(video);
+              const youtubeId = getEducationYoutubeId(video);
+
               const delay =
                 (index % 3) * 80;
 
@@ -1614,11 +1411,12 @@
 
                 <article
                   class="education-video-card"
+                  data-record-id="${escapeEducationHtml(video.id)}"
                   data-video-id="${escapeEducationHtml(video.youtube_id)}"
                   data-video-title="${escapeEducationHtml(video.title)}"
                   tabindex="0"
                   role="button"
-                  aria-label="Play ${escapeEducationHtml(video.title)}"
+                  aria-label="Open ${escapeEducationHtml(video.title)}"
                   style="
                     animation-delay:
                     ${delay}ms;
@@ -1627,15 +1425,15 @@
 
                   <div class="education-video-thumb">
 
-                    <img
-                      src="${escapeEducationHtml(video.thumbnail_url)}"
+                    ${cover ? `<img
+                      src="${escapeEducationHtml(cover)}"
                       alt="${escapeEducationHtml(video.title)}"
                       loading="lazy"
                       decoding="async"
-                    >
+                    >` : `<div class="education-video-placeholder" aria-hidden="true">P</div>`}
 
 
-                    <button
+                    ${youtubeId ? `<button
                       class="education-play"
                       type="button"
                       tabindex="-1"
@@ -1653,7 +1451,7 @@
 
                       </svg>
 
-                    </button>
+                    </button>` : ""}
 
                   </div>
 
@@ -1671,7 +1469,7 @@
 
 
                     <div class="education-video-action">
-                      Watch video
+                      ${youtubeId ? "Watch video" : "Read"}
                       <span>↗</span>
                     </div>
 
@@ -1725,16 +1523,18 @@
         .forEach(
           card => {
 
+            const open = () => {
+              const video = educationVideos.find(
+                item => String(item.id) === card.dataset.recordId
+              );
+              if (video) {
+                openEducationVideo(video);
+              }
+            };
+
             card.addEventListener(
               "click",
-              () => {
-
-                openEducationVideo(
-                  card.dataset.videoId,
-                  card.dataset.videoTitle
-                );
-
-              }
+              open
             );
 
 
@@ -1750,10 +1550,7 @@
                   event.preventDefault();
 
 
-                  openEducationVideo(
-                    card.dataset.videoId,
-                    card.dataset.videoTitle
-                  );
+                  open();
 
                 }
 
@@ -1813,101 +1610,98 @@
        OPEN VIDEO MODAL
     ==================================================== */
 
-    function openEducationVideo(
-      videoId,
-      title
-    ){
+    function renderEducationVideoDetails(video) {
+      const images = Array.isArray(video.image_urls) ? video.image_urls.slice(0, 10) : [];
+      const article = typeof video.article === "string" ? video.article : "";
 
-      if(!videoId){
-        return;
-      }
+      videoModalDetails.innerHTML = `
+        ${images.length ? `
+          <section class="testimonial-carousel" aria-label="Video photos" aria-roledescription="carousel">
+            <div class="testimonial-carousel-stage">
+              <img
+                src="${escapeEducationHtml(images[0])}"
+                alt="${escapeEducationHtml(video.title)} image 1"
+                decoding="async"
+              >
+            </div>
+            <div class="testimonial-carousel-controls">
+              ${images.length > 1 ? `
+                <button type="button" data-photo-step="-1" aria-label="Previous photo" title="Previous photo">
+                  <span aria-hidden="true">&larr;</span>
+                </button>
+              ` : ""}
+              <span class="testimonial-carousel-counter" role="status" aria-live="polite" aria-atomic="true">1 / ${images.length}</span>
+              ${images.length > 1 ? `
+                <button type="button" data-photo-step="1" aria-label="Next photo" title="Next photo">
+                  <span aria-hidden="true">&rarr;</span>
+                </button>
+              ` : ""}
+            </div>
+          </section>
+        ` : ""}
+        ${article ? `<p>${escapeEducationHtml(article)}</p>` : ""}
+      `;
 
+      let photoIndex = 0;
+      const photo = videoModalDetails.querySelector(".testimonial-carousel-stage img");
+      const counter = videoModalDetails.querySelector(".testimonial-carousel-counter");
 
-      videoModalTitle.textContent =
-        title || "Pinnacle Education";
-
-
-      videoPlayer.src =
-        "https://www.youtube.com/embed/" +
-        encodeURIComponent(videoId) +
-        "?autoplay=1&rel=0&modestbranding=1";
-
-
-      videoModal.classList.add(
-        "open"
-      );
-
-
-      videoModal.setAttribute(
-        "aria-hidden",
-        "false"
-      );
-
-
-      document.body.style.overflow =
-        "hidden";
-
-
-      setTimeout(
-        () => {
-
-          videoModalClose.focus();
-
-        },
-        200
-      );
-
+      // Replaced with the details on each opening, matching the testimonial carousel.
+      videoModalDetails.querySelectorAll("[data-photo-step]").forEach(button => {
+        button.addEventListener("click", () => {
+          photoIndex = (photoIndex + Number(button.dataset.photoStep) + images.length) % images.length;
+          photo.src = images[photoIndex];
+          photo.alt = `${video.title || "Pinnacle Education"} image ${photoIndex + 1}`;
+          counter.textContent = `${photoIndex + 1} / ${images.length}`;
+        });
+      });
     }
 
+    let videoModalPreviousOverflow = "";
 
-
-    /* ====================================================
-       CLOSE VIDEO MODAL
-    ==================================================== */
-
-    function closeEducationVideo(){
-
-      if(
-        !videoModal.classList.contains(
-          "open"
-        )
-      ){
+    function openEducationVideo(video) {
+      if (!video) {
         return;
       }
 
+      if (!videoModal.classList.contains("open")) {
+        videoModalPreviousOverflow = document.body.style.overflow;
+      }
 
-      videoModal.classList.remove(
-        "open"
-      );
+      videoModalTitle.textContent = video.title || "Pinnacle Education";
+      videoPlayer.title = video.title || "Pinnacle Realty education video";
+      const youtubeId = getEducationYoutubeId(video);
+      videoPlayerSection.hidden = !youtubeId;
+      if (youtubeId) {
+        videoPlayer.src =
+          "https://www.youtube.com/embed/" +
+          encodeURIComponent(youtubeId) +
+          "?autoplay=1&rel=0&modestbranding=1";
+      } else {
+        videoPlayer.removeAttribute("src");
+      }
 
+      renderEducationVideoDetails(video);
+      videoModal.querySelector(".education-modal-dialog").scrollTop = 0;
+      videoModal.classList.add("open");
+      videoModal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+      videoModalClose.focus();
+    }
 
-      videoModal.setAttribute(
-        "aria-hidden",
-        "true"
-      );
+    function closeEducationVideo() {
+      if (!videoModal.classList.contains("open")) {
+        return;
+      }
 
+      videoModal.classList.remove("open");
+      videoModal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = videoModalPreviousOverflow;
 
-      document.body.style.overflow =
-        "";
-
-
-      /*
-        Clearing the iframe stops the
-        YouTube video/audio completely.
-      */
-
-      setTimeout(
-        () => {
-
-          videoPlayer.src = "";
-
-          videoModalTitle.textContent =
-            "Video";
-
-        },
-        250
-      );
-
+      // Clear immediately so a delayed close cannot erase a newly opened video.
+      videoPlayer.src = "";
+      videoModalDetails.innerHTML = "";
+      videoModalTitle.textContent = "Video";
     }
 
 
