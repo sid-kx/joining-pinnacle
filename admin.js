@@ -87,6 +87,8 @@ async function loadVideos() {
       <img
         src="${escapeHtml(video.thumbnail_url)}"
         alt="${escapeHtml(video.title)}"
+        loading="lazy"
+        decoding="async"
       >
 
       <div>

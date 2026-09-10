@@ -1,25 +1,207 @@
-const menuBtn=document.querySelector('.menu-btn');const mobileMenu=document.querySelector('.mobile-menu');
-if(menuBtn&&mobileMenu){menuBtn.addEventListener('click',()=>{const open=mobileMenu.classList.toggle('open');menuBtn.setAttribute('aria-expanded',open);mobileMenu.setAttribute('aria-hidden',!open)});mobileMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{mobileMenu.classList.remove('open');menuBtn.setAttribute('aria-expanded','false')}))}
-const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.1});document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
-document.querySelectorAll('.counter').forEach(el=>{const target=+el.dataset.target;let ran=false;const io=new IntersectionObserver(es=>{if(es[0].isIntersecting&&!ran){ran=true;let n=0;const frames=40;const tick=()=>{n++;el.textContent=Math.round(target*n/frames);if(n<frames)requestAnimationFrame(tick)};tick()}},{threshold:.5});io.observe(el)});
-document.querySelectorAll('.faq-q').forEach(btn=>btn.addEventListener('click',()=>btn.closest('.faq-item').classList.toggle('open')));
-document.querySelectorAll('[data-drag-scroll]').forEach(rail=>{let down=false,startX,scrollLeft;rail.addEventListener('mousedown',e=>{down=true;startX=e.pageX-rail.offsetLeft;scrollLeft=rail.scrollLeft;rail.style.cursor='grabbing'});['mouseleave','mouseup'].forEach(ev=>rail.addEventListener(ev,()=>{down=false;rail.style.cursor='grab'}));rail.addEventListener('mousemove',e=>{if(!down)return;e.preventDefault();const x=e.pageX-rail.offsetLeft;rail.scrollLeft=scrollLeft-(x-startX)*1.3})});
-const form=document.querySelector('#join-form');if(form)form.addEventListener('submit',e=>{e.preventDefault();const msg=form.querySelector('.form-note');msg.textContent='Thanks — your demo submission was captured locally. Connect this form to your CRM or form endpoint before launch.';msg.style.color='#c7a35d';form.reset()});
-document.addEventListener("keydown", event => {
+const menuBtn = document.querySelector(".menu-btn");
+const mobileMenu = document.querySelector(".mobile-menu");
+const header = document.querySelector(".site-header");
 
-  const modifier =
-    event.ctrlKey ||
-    event.metaKey;
+if (menuBtn && mobileMenu) {
+  menuBtn.setAttribute("aria-expanded", "false");
 
-  if (
-    modifier &&
-    event.shiftKey &&
-    event.key.toLowerCase() === "o"
-  ) {
+  menuBtn.addEventListener("click", () => {
+    const open = mobileMenu.classList.toggle("open");
+
+    menuBtn.setAttribute("aria-expanded", String(open));
+    mobileMenu.setAttribute("aria-hidden", String(!open));
+  });
+
+  mobileMenu.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      mobileMenu.classList.remove("open");
+      menuBtn.setAttribute("aria-expanded", "false");
+      mobileMenu.setAttribute("aria-hidden", "true");
+    });
+  });
+}
+
+if (header) {
+  let ticking = false;
+
+  const setHeaderState = () => {
+    header.classList.toggle("is-scrolled", window.scrollY > 8);
+    ticking = false;
+  };
+
+  setHeaderState();
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!ticking) {
+        requestAnimationFrame(setHeaderState);
+        ticking = true;
+      }
+    },
+    { passive: true }
+  );
+}
+
+if (
+  window.matchMedia("(pointer: fine)").matches &&
+  !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+) {
+  const glow = document.createElement("div");
+  glow.className = "cursor-glow";
+  document.body.appendChild(glow);
+
+  let targetX = window.innerWidth / 2;
+  let targetY = window.innerHeight / 2;
+  let currentX = targetX;
+  let currentY = targetY;
+
+  window.addEventListener(
+    "pointermove",
+    event => {
+      targetX = event.clientX;
+      targetY = event.clientY;
+      glow.classList.add("visible");
+    },
+    { passive: true }
+  );
+
+  window.addEventListener("pointerleave", () => {
+    glow.classList.remove("visible");
+  });
+
+  const moveGlow = () => {
+    currentX += (targetX - currentX) * 0.16;
+    currentY += (targetY - currentY) * 0.16;
+
+    glow.style.transform =
+      `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`;
+
+    requestAnimationFrame(moveGlow);
+  };
+
+  requestAnimationFrame(moveGlow);
+}
+
+const revealEls = document.querySelectorAll(".reveal");
+
+if ("IntersectionObserver" in window) {
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    {
+      rootMargin: "0px 0px -8% 0px",
+      threshold: 0.08
+    }
+  );
+
+  revealEls.forEach(el => observer.observe(el));
+} else {
+  revealEls.forEach(el => el.classList.add("in"));
+}
+
+document.querySelectorAll(".counter").forEach(el => {
+  const target = Number(el.dataset.target || 0);
+
+  const runCounter = () => {
+    let frame = 0;
+    const frames = 40;
+
+    const tick = () => {
+      frame += 1;
+      el.textContent = Math.round(target * frame / frames);
+
+      if (frame < frames) {
+        requestAnimationFrame(tick);
+      }
+    };
+
+    tick();
+  };
+
+  if ("IntersectionObserver" in window) {
+    const counterObserver = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          runCounter();
+          counterObserver.unobserve(el);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    counterObserver.observe(el);
+  } else {
+    runCounter();
+  }
+});
+
+document.querySelectorAll(".faq-q").forEach(btn => {
+  btn.addEventListener("click", () => {
+    btn.closest(".faq-item")?.classList.toggle("open");
+  });
+});
+
+document.querySelectorAll("[data-drag-scroll]").forEach(rail => {
+  let down = false;
+  let startX = 0;
+  let scrollLeft = 0;
+
+  rail.addEventListener("mousedown", event => {
+    down = true;
+    startX = event.pageX - rail.offsetLeft;
+    scrollLeft = rail.scrollLeft;
+    rail.style.cursor = "grabbing";
+  });
+
+  ["mouseleave", "mouseup"].forEach(type => {
+    rail.addEventListener(type, () => {
+      down = false;
+      rail.style.cursor = "grab";
+    });
+  });
+
+  rail.addEventListener("mousemove", event => {
+    if (!down) {
+      return;
+    }
 
     event.preventDefault();
 
+    const x = event.pageX - rail.offsetLeft;
+    rail.scrollLeft = scrollLeft - (x - startX) * 1.3;
+  });
+});
+
+const form = document.querySelector("#join-form");
+
+if (form) {
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+
+    const msg = form.querySelector(".form-note");
+
+    if (msg) {
+      msg.textContent =
+        "Thanks - your demo submission was captured locally. Connect this form to your CRM or form endpoint before launch.";
+      msg.style.color = "#c7a35d";
+    }
+
+    form.reset();
+  });
+}
+
+document.addEventListener("keydown", event => {
+  const modifier = event.ctrlKey || event.metaKey;
+
+  if (modifier && event.shiftKey && event.key.toLowerCase() === "o") {
+    event.preventDefault();
     window.location.href = "login.html";
   }
-
 });
