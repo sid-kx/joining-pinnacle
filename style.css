@@ -111,6 +111,24 @@ a,button,input,select,textarea{-webkit-tap-highlight-color:transparent}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}.cursor-glow{display:none}}
 
+/* Individual Education articles */
+.article-page{background:var(--ink);color:#fff}
+.article-main{padding:128px 0 90px}
+.article-shell{width:min(980px,calc(100% - 48px));margin:0 auto}
+.article-back{display:inline-flex;align-items:center;min-height:44px;color:var(--gold2);text-decoration:none;font-size:14px;margin-bottom:30px}
+.article-back:hover{color:#fff}
+.article-heading{max-width:820px;margin-bottom:36px}
+.article-kicker{font:11px "DM Mono",monospace;letter-spacing:0;color:var(--gold2);margin:0 0 18px}
+.article-heading h1{font-size:48px;line-height:1.12;letter-spacing:0;overflow-wrap:anywhere;margin:0 0 20px}
+.article-heading time{font:12px "DM Mono",monospace;color:#aaa}
+#article-media{display:grid;gap:28px}
+.article-body{max-width:800px;margin:36px auto 0;overflow-wrap:anywhere}
+.article-body:empty{display:none}
+.article-body p{white-space:pre-line;font-size:17px;line-height:1.85;color:#d0d0d0;margin:0 0 24px}
+#article-status{color:#c8c8c8;min-height:180px}
+@media(max-width:900px){.article-main{padding-top:116px}}
+@media(max-width:600px){.article-shell{width:calc(100% - 32px)}.article-heading h1{font-size:32px}.article-body p{font-size:16px}.article-main{padding-bottom:60px}}
+
 /* Testimonials */
 .testimonials{padding:90px 0;border-top:1px solid var(--line-dark);border-bottom:1px solid var(--line-dark)}
 .testimonials-top{margin-bottom:34px}

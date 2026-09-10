@@ -134,6 +134,8 @@
 
 
     .education-video-card{
+      text-decoration:none;
+      color:inherit;
       position:relative;
 
       border:
@@ -483,225 +485,6 @@
 
 
     /* ======================================================
-       VIDEO MODAL
-    ====================================================== */
-
-    .education-modal{
-      position:fixed;
-      inset:0;
-
-      z-index:99999;
-
-      display:flex;
-      align-items:center;
-      justify-content:center;
-
-      padding:28px;
-
-      opacity:0;
-      visibility:hidden;
-
-      pointer-events:none;
-
-      transition:
-        opacity .3s ease,
-        visibility .3s ease;
-    }
-
-
-    .education-modal.open{
-      opacity:1;
-      visibility:visible;
-
-      pointer-events:auto;
-    }
-
-
-    .education-modal-backdrop{
-      position:absolute;
-      inset:0;
-
-      background:
-        rgba(3,4,5,.91);
-
-      backdrop-filter:blur(13px);
-      -webkit-backdrop-filter:blur(13px);
-    }
-
-
-    .education-modal-dialog{
-      position:relative;
-
-      z-index:2;
-
-      width:min(980px,100%);
-      max-height:min(86vh,900px);
-      overflow:auto;
-      padding:34px;
-      border:1px solid rgba(255,255,255,.14);
-      border-radius:22px;
-      background:#111315;
-      color:#fff;
-
-      opacity:0;
-
-      transform:
-        translateY(18px)
-        scale(.975);
-
-      transition:
-        opacity .32s ease,
-        transform .32s
-        cubic-bezier(.2,.8,.2,1);
-    }
-
-
-    .education-modal.open
-    .education-modal-dialog{
-      opacity:1;
-
-      transform:
-        translateY(0)
-        scale(1);
-    }
-
-
-
-    /* ======================================================
-       MODAL HEADER
-    ====================================================== */
-
-    .education-modal-top{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-end;
-
-      gap:25px;
-
-      margin-bottom:17px;
-    }
-
-
-    .education-modal-copy{
-      min-width:0;
-    }
-
-
-    .education-modal-kicker{
-      display:block;
-
-      font:
-        9px
-        "DM Mono",
-        monospace;
-
-      letter-spacing:.14em;
-
-      color:#c7a35d;
-
-      margin-bottom:7px;
-    }
-
-
-    .education-modal-title{
-      font-family:Manrope,sans-serif;
-
-      font-size:29px;
-
-      line-height:1.12;
-
-      letter-spacing:0;
-      overflow-wrap:anywhere;
-
-      color:#fff;
-
-      margin:0;
-
-      max-width:820px;
-    }
-
-
-    .education-modal-close{
-      flex:0 0 auto;
-
-      width:46px;
-      height:46px;
-
-      border:
-        1px solid
-        rgba(255,255,255,.18);
-
-      border-radius:50%;
-
-      background:
-        rgba(255,255,255,.04);
-
-      color:#fff;
-
-      font-size:26px;
-      line-height:1;
-
-      cursor:pointer;
-
-      transition:
-        background .25s ease,
-        border-color .25s ease;
-    }
-
-
-    .education-modal-close:hover{
-      background:
-        rgba(255,255,255,.10);
-
-      border-color:
-        rgba(199,163,93,.65);
-    }
-
-
-
-    /* ======================================================
-       MODAL PLAYER
-    ====================================================== */
-
-    .education-modal-player{
-      width:100%;
-
-      aspect-ratio:16/9;
-
-      overflow:hidden;
-
-      border:
-        1px solid
-        rgba(255,255,255,.12);
-
-      border-radius:8px;
-
-      background:#000;
-
-      box-shadow:
-        0 30px 100px
-        rgba(0,0,0,.6);
-    }
-
-
-    .education-modal-player iframe{
-      width:100%;
-      height:100%;
-
-      display:block;
-
-      border:0;
-    }
-
-    .education-modal-player[hidden]{
-      display:none;
-    }
-    .education-modal-details{
-      display:contents;
-    }
-
-
-    /* ======================================================
        MOBILE
     ====================================================== */
 
@@ -738,27 +521,11 @@
       }
 
 
-      .education-modal{
-        padding:17px;
-      }
 
 
-      .education-modal-top{
-        align-items:center;
-      }
 
-      .education-modal-dialog{
-        padding:26px 20px;
-      }
 
-      .education-modal-title{
-        font-size:24px;
-      }
 
-      .education-modal-close{
-        width:42px;
-        height:42px;
-      }
 
 
       .education-play{
@@ -918,7 +685,7 @@
           <div>
 
             <h2>
-              Videos
+              Articles
             </h2>
 
           </div>
@@ -940,7 +707,7 @@
 
               <div class="education-loader"></div>
 
-              Loading education videos...
+              Loading articles...
 
             </div>
 
@@ -1089,90 +856,6 @@
 
 
   <!-- ======================================================
-       VIDEO POPUP
-  ====================================================== -->
-
-  <div
-    id="education-video-modal"
-    class="education-modal"
-    aria-hidden="true"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="education-modal-title"
-  >
-
-    <div
-      class="education-modal-backdrop"
-      data-close-video-modal
-    ></div>
-
-
-    <div class="education-modal-dialog">
-
-      <div class="education-modal-top">
-
-        <div class="education-modal-copy">
-
-          <span class="education-modal-kicker">
-            PINNACLE EDUCATION
-          </span>
-
-          <h2
-            id="education-modal-title"
-            class="education-modal-title"
-          >
-            Video
-          </h2>
-
-        </div>
-
-
-        <button
-          id="education-modal-close"
-          class="education-modal-close"
-          type="button"
-          aria-label="Close video"
-        >
-          ×
-        </button>
-
-      </div>
-
-
-      <div class="testimonial-modal-body">
-
-        <div class="education-modal-player">
-
-          <iframe
-            id="education-youtube-player"
-            src=""
-            title="Pinnacle Realty education video"
-            allow="
-              accelerometer;
-              autoplay;
-              clipboard-write;
-              encrypted-media;
-              gyroscope;
-              picture-in-picture;
-              web-share
-            "
-            referrerpolicy="strict-origin-when-cross-origin"
-            allowfullscreen
-          ></iframe>
-
-        </div>
-
-        <div id="education-modal-details" class="education-modal-details"></div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-
-  <!-- ======================================================
        SCRIPTS
   ====================================================== -->
 
@@ -1215,31 +898,7 @@
       );
 
 
-    const videoModal =
-      document.getElementById(
-        "education-video-modal"
-      );
 
-
-    const videoPlayer =
-      document.getElementById(
-        "education-youtube-player"
-      );
-
-    const videoPlayerSection = videoPlayer.parentElement;
-
-    const videoModalTitle =
-      document.getElementById(
-        "education-modal-title"
-      );
-
-
-    const videoModalClose =
-      document.getElementById(
-        "education-modal-close"
-      );
-
-    const videoModalDetails = document.getElementById("education-modal-details");
 
 
     /* ====================================================
@@ -1289,7 +948,7 @@
       if(error){
 
         console.error(
-          "Unable to load Education videos:",
+          "Unable to load Education articles:",
           error
         );
 
@@ -1298,7 +957,7 @@
 
           <div class="education-video-state">
 
-            We couldn't load the videos right now.
+            We couldn't load the articles right now.
             Please try again later.
 
           </div>
@@ -1330,7 +989,7 @@
 
           <div class="education-video-state">
 
-            New education videos are coming soon.
+            New articles are coming soon.
 
           </div>
 
@@ -1358,208 +1017,51 @@
     ==================================================== */
 
     function getEducationVideoCover(video) {
+      // Reuse the existing thumbnail_url column for dedicated and legacy covers.
+      if (typeof video.thumbnail_url === "string" && video.thumbnail_url.trim()) {
+        return video.thumbnail_url.trim();
+      }
       const firstImage = Array.isArray(video.image_urls) ? video.image_urls[0] : null;
       if (typeof firstImage === "string" && firstImage.trim()) {
         return firstImage;
       }
-      // Only old rows need thumbnail_url; new posts use their first uploaded image.
-      return typeof video.thumbnail_url === "string" ? video.thumbnail_url.trim() : "";
-    }
-
-    function getEducationYoutubeId(video) {
-      if (video.youtube_id) {
-        return video.youtube_id;
-      }
-      try {
-        const url = new URL(video.youtube_url);
-        const parts = url.pathname.split("/").filter(Boolean);
-        if (url.hostname === "youtu.be" || url.hostname === "www.youtu.be") {
-          return parts[0] || "";
-        }
-        if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtube-nocookie.com", "www.youtube-nocookie.com"].includes(url.hostname)) {
-          return url.searchParams.get("v") ||
-            (["embed", "shorts", "live"].includes(parts[0]) ? parts[1] || "" : "");
-        }
-      } catch {
-        return "";
-      }
       return "";
     }
 
-    function renderEducationVideos(){
+    function renderEducationVideos() {
+      educationGrid.innerHTML = educationVideos.slice(0, visibleVideoCount).map((article, index) => {
+        const cover = getEducationVideoCover(article);
+        const href = `article.html?id=${encodeURIComponent(article.id)}`;
+        return `
+          <a class="education-video-card" href="${escapeEducationHtml(href)}"
+             style="animation-delay:${(index % 3) * 80}ms">
+            <div class="education-video-thumb">
+              ${cover ? `<img src="${escapeEducationHtml(cover)}" alt="" loading="lazy" decoding="async">`
+                : '<div class="education-video-placeholder" aria-hidden="true">P</div>'}
+            </div>
+            <div class="education-video-content">
+              <span class="education-video-label">PINNACLE ARTICLE</span>
+              <h3>${escapeEducationHtml(article.title)}</h3>
+              <div class="education-video-action">Read Article <span aria-hidden="true">&rarr;</span></div>
+            </div>
+          </a>
+        `;
+      }).join("");
 
-      const visibleVideos =
-        educationVideos.slice(
-          0,
-          visibleVideoCount
-        );
-
-
-      educationGrid.innerHTML =
-        visibleVideos
-          .map(
-            (video,index) => {
-
-              const cover = getEducationVideoCover(video);
-              const youtubeId = getEducationYoutubeId(video);
-
-              const delay =
-                (index % 3) * 80;
-
-
-              return `
-
-                <article
-                  class="education-video-card"
-                  data-record-id="${escapeEducationHtml(video.id)}"
-                  data-video-id="${escapeEducationHtml(video.youtube_id)}"
-                  data-video-title="${escapeEducationHtml(video.title)}"
-                  tabindex="0"
-                  role="button"
-                  aria-label="Open ${escapeEducationHtml(video.title)}"
-                  style="
-                    animation-delay:
-                    ${delay}ms;
-                  "
-                >
-
-                  <div class="education-video-thumb">
-
-                    ${cover ? `<img
-                      src="${escapeEducationHtml(cover)}"
-                      alt="${escapeEducationHtml(video.title)}"
-                      loading="lazy"
-                      decoding="async"
-                    >` : `<div class="education-video-placeholder" aria-hidden="true">P</div>`}
-
-
-                    ${youtubeId ? `<button
-                      class="education-play"
-                      type="button"
-                      tabindex="-1"
-                      aria-hidden="true"
-                    >
-
-                      <svg
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
-
-                        <path
-                          d="M8 5v14l11-7z"
-                        />
-
-                      </svg>
-
-                    </button>` : ""}
-
-                  </div>
-
-
-                  <div class="education-video-content">
-
-                    <span class="education-video-label">
-                      PINNACLE VIDEO
-                    </span>
-
-
-                    <h3>
-                      ${escapeEducationHtml(video.title)}
-                    </h3>
-
-
-                    <div class="education-video-action">
-                      ${youtubeId ? "Watch video" : "Read"}
-                      <span>↗</span>
-                    </div>
-
-                  </div>
-
-                </article>
-
-              `;
-
-            }
-          )
-          .join("");
-
-
-      attachEducationVideoEvents();
-
-
-      if(
-        visibleVideoCount <
-        educationVideos.length
-      ){
-
-        loadMoreWrap.classList.add(
-          "visible"
-        );
-
-      }
-
-      else{
-
-        loadMoreWrap.classList.remove(
-          "visible"
-        );
-
-      }
-
+      attachArticleCardEvents();
+      loadMoreWrap.classList.toggle("visible", visibleVideoCount < educationVideos.length);
     }
 
-
-
-    /* ====================================================
-       CLICK / KEYBOARD EVENTS
-    ==================================================== */
-
-    function attachEducationVideoEvents(){
-
-      document
-        .querySelectorAll(
-          ".education-video-card"
-        )
-        .forEach(
-          card => {
-
-            const open = () => {
-              const video = educationVideos.find(
-                item => String(item.id) === card.dataset.recordId
-              );
-              if (video) {
-                openEducationVideo(video);
-              }
-            };
-
-            card.addEventListener(
-              "click",
-              open
-            );
-
-
-            card.addEventListener(
-              "keydown",
-              event => {
-
-                if(
-                  event.key === "Enter" ||
-                  event.key === " "
-                ){
-
-                  event.preventDefault();
-
-
-                  open();
-
-                }
-
-              }
-            );
-
+    function attachArticleCardEvents() {
+      document.querySelectorAll(".education-video-card").forEach(card => {
+        // Enter and mouse clicks use native links; Space retains the previous card behavior.
+        card.addEventListener("keydown", event => {
+          if (event.key === " ") {
+            event.preventDefault();
+            card.click();
           }
-        );
-
+        });
+      });
     }
 
 
@@ -1600,152 +1102,6 @@
           },
           180
         );
-
-      }
-    );
-
-
-
-    /* ====================================================
-       OPEN VIDEO MODAL
-    ==================================================== */
-
-    function renderEducationVideoDetails(video) {
-      const images = Array.isArray(video.image_urls) ? video.image_urls.slice(0, 10) : [];
-      const article = typeof video.article === "string" ? video.article : "";
-
-      videoModalDetails.innerHTML = `
-        ${images.length ? `
-          <section class="testimonial-carousel" aria-label="Video photos" aria-roledescription="carousel">
-            <div class="testimonial-carousel-stage">
-              <img
-                src="${escapeEducationHtml(images[0])}"
-                alt="${escapeEducationHtml(video.title)} image 1"
-                decoding="async"
-              >
-            </div>
-            <div class="testimonial-carousel-controls">
-              ${images.length > 1 ? `
-                <button type="button" data-photo-step="-1" aria-label="Previous photo" title="Previous photo">
-                  <span aria-hidden="true">&larr;</span>
-                </button>
-              ` : ""}
-              <span class="testimonial-carousel-counter" role="status" aria-live="polite" aria-atomic="true">1 / ${images.length}</span>
-              ${images.length > 1 ? `
-                <button type="button" data-photo-step="1" aria-label="Next photo" title="Next photo">
-                  <span aria-hidden="true">&rarr;</span>
-                </button>
-              ` : ""}
-            </div>
-          </section>
-        ` : ""}
-        ${article ? `<p>${escapeEducationHtml(article)}</p>` : ""}
-      `;
-
-      let photoIndex = 0;
-      const photo = videoModalDetails.querySelector(".testimonial-carousel-stage img");
-      const counter = videoModalDetails.querySelector(".testimonial-carousel-counter");
-
-      // Replaced with the details on each opening, matching the testimonial carousel.
-      videoModalDetails.querySelectorAll("[data-photo-step]").forEach(button => {
-        button.addEventListener("click", () => {
-          photoIndex = (photoIndex + Number(button.dataset.photoStep) + images.length) % images.length;
-          photo.src = images[photoIndex];
-          photo.alt = `${video.title || "Pinnacle Education"} image ${photoIndex + 1}`;
-          counter.textContent = `${photoIndex + 1} / ${images.length}`;
-        });
-      });
-    }
-
-    let videoModalPreviousOverflow = "";
-
-    function openEducationVideo(video) {
-      if (!video) {
-        return;
-      }
-
-      if (!videoModal.classList.contains("open")) {
-        videoModalPreviousOverflow = document.body.style.overflow;
-      }
-
-      videoModalTitle.textContent = video.title || "Pinnacle Education";
-      videoPlayer.title = video.title || "Pinnacle Realty education video";
-      const youtubeId = getEducationYoutubeId(video);
-      videoPlayerSection.hidden = !youtubeId;
-      if (youtubeId) {
-        videoPlayer.src =
-          "https://www.youtube.com/embed/" +
-          encodeURIComponent(youtubeId) +
-          "?autoplay=1&rel=0&modestbranding=1";
-      } else {
-        videoPlayer.removeAttribute("src");
-      }
-
-      renderEducationVideoDetails(video);
-      videoModal.querySelector(".education-modal-dialog").scrollTop = 0;
-      videoModal.classList.add("open");
-      videoModal.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-      videoModalClose.focus();
-    }
-
-    function closeEducationVideo() {
-      if (!videoModal.classList.contains("open")) {
-        return;
-      }
-
-      videoModal.classList.remove("open");
-      videoModal.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = videoModalPreviousOverflow;
-
-      // Clear immediately so a delayed close cannot erase a newly opened video.
-      videoPlayer.src = "";
-      videoModalDetails.innerHTML = "";
-      videoModalTitle.textContent = "Video";
-    }
-
-
-
-    /* ====================================================
-       MODAL CLOSE EVENTS
-    ==================================================== */
-
-    videoModalClose.addEventListener(
-      "click",
-      closeEducationVideo
-    );
-
-
-    document
-      .querySelectorAll(
-        "[data-close-video-modal]"
-      )
-      .forEach(
-        element => {
-
-          element.addEventListener(
-            "click",
-            closeEducationVideo
-          );
-
-        }
-      );
-
-
-    document.addEventListener(
-      "keydown",
-      event => {
-
-        if(
-          event.key === "Escape" &&
-          videoModal.classList.contains(
-            "open"
-          )
-        ){
-
-          closeEducationVideo();
-
-        }
 
       }
     );

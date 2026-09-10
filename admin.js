@@ -3,6 +3,7 @@ const urlInput = document.getElementById("youtube-url");
 const videoTitle = document.getElementById("video-title");
 const videoArticle = document.getElementById("video-article");
 const videoImages = document.getElementById("video-images");
+const videoThumbnail = document.getElementById("video-thumbnail");
 const messageBox = document.getElementById("admin-message");
 const list = document.getElementById("admin-video-list");
 const logoutButton = document.getElementById("logout");
@@ -11,11 +12,14 @@ const testimonialTitle = document.getElementById("testimonial-title");
 const testimonialArticle = document.getElementById("testimonial-article");
 const testimonialYoutubeUrl = document.getElementById("testimonial-youtube-url");
 const testimonialImages = document.getElementById("testimonial-images");
+const testimonialThumbnail = document.getElementById("testimonial-thumbnail");
 const testimonialMessage = document.getElementById("testimonial-message");
 const testimonialList = document.getElementById("admin-testimonial-list");
 
 const TESTIMONIAL_IMAGE_BUCKET = "testimonial-images";
 const VIDEO_IMAGE_BUCKET = "video-images";
+const publishedVideos = new Map();
+const publishedTestimonials = new Map();
 
 async function initializeAdmin() {
   const {
@@ -52,9 +56,10 @@ async function initializeAdmin() {
 }
 
 async function loadVideos() {
+  publishedVideos.clear();
   list.innerHTML = `
     <div class="empty-state">
-      Loading videos...
+      Loading articles...
     </div>
   `;
 
@@ -82,7 +87,7 @@ async function loadVideos() {
 
     list.innerHTML = `
       <div class="empty-state">
-        Unable to load videos: ${escapeHtml(error.message)}
+        Unable to load articles: ${escapeHtml(error.message)}
       </div>
     `;
 
@@ -92,7 +97,7 @@ async function loadVideos() {
   if (!videos || videos.length === 0) {
     list.innerHTML = `
       <div class="empty-state">
-        No videos have been published yet.
+        No articles have been published yet.
       </div>
     `;
 
@@ -100,6 +105,7 @@ async function loadVideos() {
   }
 
   list.innerHTML = videos.map(video => {
+    publishedVideos.set(String(video.id), video);
     const cover = getVideoCover(video);
 
     return `
@@ -120,6 +126,8 @@ async function loadVideos() {
           ${escapeHtml(video.title)}
         </h3>
 
+        <p>${escapeHtml(trimWords(video.article, 22))}</p>
+
         ${video.youtube_url ? `<a
           href="${escapeHtml(video.youtube_url)}"
           target="_blank"
@@ -130,6 +138,8 @@ async function loadVideos() {
 
       </div>
 
+      <div class="admin-actions">
+      <button class="edit-post" data-kind="article" data-id="${escapeHtml(video.id)}" type="button">Edit</button>
       <button
         class="delete-video"
         data-id="${video.id}"
@@ -137,10 +147,13 @@ async function loadVideos() {
       >
         Delete
       </button>
+      </div>
 
     </article>
   `;
   }).join("");
+
+  attachEditButtons(list);
 
   document
     .querySelectorAll(".delete-video")
@@ -152,12 +165,14 @@ async function loadVideos() {
 }
 
 function getVideoCover(video) {
+  if (typeof video.thumbnail_url === "string" && video.thumbnail_url.trim()) {
+    return video.thumbnail_url.trim();
+  }
   const firstImage = Array.isArray(video.image_urls) ? video.image_urls[0] : null;
   if (typeof firstImage === "string" && firstImage.trim()) {
     return firstImage;
   }
-  // thumbnail_url is supported only for existing rows during migration.
-  return typeof video.thumbnail_url === "string" ? video.thumbnail_url.trim() : "";
+  return "";
 }
 
 function getVideoContentDraft() {
@@ -168,7 +183,8 @@ function getVideoContentDraft() {
     article: videoArticle.value.trim(),
     youtube_url: youtubeUrl || null,
     youtube_id: extractYoutubeId(youtubeUrl) || null,
-    images: Array.from(videoImages.files || [])
+    images: Array.from(videoImages.files || []),
+    thumbnails: Array.from(videoThumbnail.files || [])
   };
 }
 
@@ -184,6 +200,12 @@ async function handleVideoSubmit(event) {
   }
 
   const draft = getVideoContentDraft();
+
+  const fileError = validateContentImages(draft.images, draft.thumbnails);
+  if (fileError) {
+    messageBox.textContent = fileError;
+    return;
+  }
 
   if (!draft.title) {
     messageBox.textContent = "Add a title first.";
@@ -205,13 +227,15 @@ async function handleVideoSubmit(event) {
   const submitButton = form.querySelector('button[type="submit"]');
   videoPublishing = true;
   submitButton.disabled = true;
-  messageBox.textContent = "Publishing video...";
+  messageBox.textContent = "Publishing article...";
 
   let imageUrls = [];
+  let thumbnailUrls = [];
   let publishedId;
 
   try {
     imageUrls = await uploadVideoImages(draft.images);
+    thumbnailUrls = await uploadVideoImages(draft.thumbnails);
 
     const { data, error } = await db
       .from("education_videos")
@@ -221,7 +245,7 @@ async function handleVideoSubmit(event) {
         youtube_url: draft.youtube_url,
         youtube_id: draft.youtube_id,
         image_urls: imageUrls,
-        thumbnail_url: null
+        thumbnail_url: thumbnailUrls[0] || null
       })
       .select("id")
       .single();
@@ -230,32 +254,32 @@ async function handleVideoSubmit(event) {
       throw new Error(`Database insert failed: ${error.message}`);
     }
     if (!data?.id) {
-      throw new Error("Database insert did not return a video ID.");
+      throw new Error("Database insert did not return an article ID.");
     }
     publishedId = data.id;
   } catch (error) {
-    let message = error?.message || "Unable to publish the video.";
-    if (imageUrls.length) {
+    let message = error?.message || "Unable to publish the article.";
+    if (imageUrls.length || thumbnailUrls.length) {
       try {
-        await removeVideoImages(imageUrls);
+        await removeVideoImages([...imageUrls, ...thumbnailUrls]);
       } catch (cleanupError) {
         message += ` Image rollback also failed: ${cleanupError.message}. Uploaded images may need manual cleanup.`;
       }
     }
     console.error("Video publishing failed:", error);
-    messageBox.textContent = `Video was not published. ${message}`;
+    messageBox.textContent = `Article was not published. ${message}`;
     return;
   } finally {
     videoPublishing = false;
     submitButton.disabled = false;
   }
 
-  messageBox.textContent = `Video published successfully. Database ID: ${publishedId}`;
+  messageBox.textContent = `Article published successfully. Database ID: ${publishedId}`;
   form.reset();
   try {
     await loadVideos();
   } catch (error) {
-    messageBox.textContent += " Unable to refresh the list. Reload to see the published video.";
+    messageBox.textContent += " Unable to refresh the list. Reload to see the published article.";
     console.error("Video list refresh failed:", error);
   }
 }
@@ -354,75 +378,82 @@ async function uploadVideoImages(files) {
   }
 }
 
+let testimonialPublishing = false;
 if (testimonialForm) {
-  testimonialForm.addEventListener("submit", async event => {
-    event.preventDefault();
+  testimonialForm.addEventListener("submit", handleTestimonialSubmit);
+}
 
-    const title = testimonialTitle.value.trim();
-    const article = testimonialArticle.value.trim();
-    const youtubeUrl = testimonialYoutubeUrl.value.trim();
-    const files = Array.from(testimonialImages.files || []);
+async function handleTestimonialSubmit(event) {
+  event.preventDefault();
+  if (testimonialPublishing) return;
 
-    if (!title || !article) {
-      testimonialMessage.textContent =
-        "Add a title and article first.";
-      return;
+  const title = testimonialTitle.value.trim();
+  const article = testimonialArticle.value.trim();
+  const youtubeUrl = testimonialYoutubeUrl.value.trim();
+  const youtubeId = extractYoutubeId(youtubeUrl);
+  const files = Array.from(testimonialImages.files || []);
+  const thumbnails = Array.from(testimonialThumbnail.files || []);
+  const fileError = validateContentImages(files, thumbnails);
+  if (!title || !article || fileError) {
+    testimonialMessage.textContent = fileError || "Add a title and article first.";
+    return;
+  }
+  if (youtubeUrl && !isSupportedVideoYoutubeUrl(youtubeUrl, youtubeId)) {
+    testimonialMessage.textContent = "Enter a supported YouTube link, or leave it blank.";
+    return;
+  }
+
+  const submitButton = testimonialForm.querySelector('button[type="submit"]');
+  testimonialPublishing = true;
+  submitButton.disabled = true;
+  testimonialMessage.textContent = "Publishing testimonial...";
+  const uploaded = [];
+  let publishedId;
+  try {
+    const imageUrls = await uploadTestimonialImages(files);
+    uploaded.push(...imageUrls);
+    const thumbnailUrls = await uploadTestimonialImages(thumbnails);
+    uploaded.push(...thumbnailUrls);
+    const { data, error } = await db.from("agent_testimonials")
+      .insert({
+        title, article,
+        youtube_url: youtubeUrl || null,
+        youtube_id: youtubeId || null,
+        image_urls: imageUrls,
+        thumbnail_url: thumbnailUrls[0] || null
+      })
+      .select("id")
+      .single();
+    if (error || !data?.id) {
+      throw new Error(`Database insert failed: ${error?.message || "No testimonial ID was returned."}`);
     }
-
-    if (files.length > 10) {
-      testimonialMessage.textContent =
-        "Upload 10 images or fewer.";
-      return;
-    }
-
-    testimonialMessage.textContent =
-      "Adding testimonial...";
-
+    publishedId = data.id;
+  } catch (error) {
+    let message = error?.message || "Unable to publish the testimonial.";
     try {
-      const imageUrls =
-        await uploadTestimonialImages(files);
-
-      const {
-        data,
-        error
-      } = await db
-        .from("agent_testimonials")
-        .insert({
-          title,
-          article,
-          youtube_url: youtubeUrl || null,
-          youtube_id: extractYoutubeId(youtubeUrl) || null,
-          image_urls: imageUrls
-        })
-        .select("id")
-        .single();
-
-      if (error) {
-        console.error("Testimonial insert error:", error);
-
-        testimonialMessage.textContent =
-          `Unable to add testimonial: ${error.message}`;
-        return;
-      }
-
-      testimonialMessage.textContent =
-        `Testimonial added. Database ID: ${data.id}`;
-
-      testimonialForm.reset();
-
-      await loadTestimonials();
-    } catch (error) {
-      console.error("Unexpected testimonial error:", error);
-
-      testimonialMessage.textContent =
-        error?.message ||
-        "Unexpected error while adding the testimonial.";
+      await removeTestimonialImages(uploaded);
+    } catch (cleanupError) {
+      message += ` New-image rollback also failed: ${cleanupError.message}. Manual Storage cleanup may be needed.`;
     }
-  });
+    testimonialMessage.textContent = `Testimonial was not published. ${message}`;
+    console.error("Testimonial publishing failed:", error);
+    return;
+  } finally {
+    testimonialPublishing = false;
+    submitButton.disabled = false;
+  }
+  testimonialMessage.textContent = `Testimonial published successfully. Database ID: ${publishedId}`;
+  testimonialForm.reset();
+  try {
+    await loadTestimonials();
+  } catch (error) {
+    testimonialMessage.textContent += " Reload the page to refresh the published list.";
+    console.error("Testimonial list refresh failed:", error);
+  }
 }
 
 async function deleteVideo(id) {
-  const confirmed = window.confirm("Are you sure you want to delete this video?");
+  const confirmed = window.confirm("Are you sure you want to delete this article?");
   if (!confirmed) {
     return;
   }
@@ -432,7 +463,7 @@ async function deleteVideo(id) {
   try {
     const { data: video, error: fetchError } = await db
       .from("education_videos")
-      .select("image_urls")
+      .select("image_urls,thumbnail_url")
       .eq("id", id)
       .single();
 
@@ -443,6 +474,7 @@ async function deleteVideo(id) {
     const imageUrls = Array.isArray(video.image_urls)
       ? video.image_urls.filter(url => getVideoImagePath(url))
       : [];
+    if (getVideoImagePath(video.thumbnail_url)) imageUrls.push(video.thumbnail_url);
 
     if (imageUrls.length) {
       failureMessage = "Video image Storage cleanup failed. The video row was kept. Check Storage delete permissions and try again.";
@@ -473,6 +505,7 @@ async function deleteVideo(id) {
 }
 
 async function loadTestimonials() {
+  publishedTestimonials.clear();
   if (!testimonialList) {
     return;
   }
@@ -495,6 +528,7 @@ async function loadTestimonials() {
       youtube_url,
       youtube_id,
       image_urls,
+      thumbnail_url,
       created_at
     `)
     .order("created_at", {
@@ -524,15 +558,8 @@ async function loadTestimonials() {
   }
 
   testimonialList.innerHTML = testimonials.map(testimonial => {
-    const images =
-      Array.isArray(testimonial.image_urls)
-        ? testimonial.image_urls
-        : [];
-
-    const thumb =
-      images[0] ||
-      getYoutubeThumbnail(testimonial.youtube_id) ||
-      "";
+    publishedTestimonials.set(String(testimonial.id), testimonial);
+    const thumb = getTestimonialCover(testimonial);
 
     return `
       <article class="admin-testimonial">
@@ -564,6 +591,8 @@ async function loadTestimonials() {
           </p>
         </div>
 
+        <div class="admin-actions">
+        <button class="edit-post" data-kind="testimonial" data-id="${escapeHtml(testimonial.id)}" type="button">Edit</button>
         <button
           class="delete-testimonial"
           data-id="${testimonial.id}"
@@ -571,10 +600,13 @@ async function loadTestimonials() {
         >
           Delete
         </button>
+        </div>
 
       </article>
     `;
   }).join("");
+
+  attachEditButtons(testimonialList);
 
   document
     .querySelectorAll(".delete-testimonial")
@@ -586,65 +618,58 @@ async function loadTestimonials() {
 }
 
 async function uploadTestimonialImages(files) {
-  if (files.length === 0) {
-    return [];
-  }
-
-  const uploads =
-    files.slice(0, 10).map(async (file, index) => {
-      const extension =
-        file.name.includes(".")
-          ? file.name.split(".").pop().toLowerCase()
-          : "jpg";
-
-      const id =
-        crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${Date.now()}-${index}`;
-
-      const path =
-        `testimonials/${id}.${extension}`;
-
-      const {
-        error
-      } = await db.storage
-        .from(TESTIMONIAL_IMAGE_BUCKET)
-        .upload(path, file, {
-          cacheControl: "31536000",
-          upsert: false
-        });
-
-      if (error) {
-        throw new Error(
-          `Unable to upload ${file.name}: ${error.message}`
-        );
+  const fileError = validateContentImages(files, []);
+  if (fileError) throw new Error(fileError);
+  const imageUrls = [];
+  try {
+    // Sequential uploads preserve image order and finish before any partial rollback.
+    for (const [index, file] of files.entries()) {
+      const suffix = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "jpg";
+      const extension = /^[a-z0-9]{1,10}$/.test(suffix) ? suffix : "jpg";
+      const id = crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
+      const path = `testimonials/${id}.${extension}`;
+      const bucket = db.storage.from(TESTIMONIAL_IMAGE_BUCKET);
+      const { data } = bucket.getPublicUrl(path);
+      if (!data?.publicUrl || getTestimonialImagePath(data.publicUrl) !== path) {
+        throw new Error("Unable to generate a valid testimonial image URL.");
       }
-
-      const {
-        data
-      } = db.storage
-        .from(TESTIMONIAL_IMAGE_BUCKET)
-        .getPublicUrl(path);
-
-      return data.publicUrl;
-    });
-
-  return Promise.all(uploads);
+      const { error } = await bucket.upload(path, file, {
+        cacheControl: "31536000", upsert: false
+      });
+      if (error) throw new Error(`Unable to upload ${file.name}: ${error.message}`);
+      imageUrls.push(data.publicUrl);
+    }
+    return imageUrls;
+  } catch (error) {
+    try {
+      await removeTestimonialImages(imageUrls);
+    } catch (cleanupError) {
+      throw new Error(`${error.message} New-image rollback also failed: ${cleanupError.message}. Manual Storage cleanup may be needed.`);
+    }
+    throw error;
+  }
 }
 
 function getTestimonialImagePath(value) {
-  if (typeof value !== "string") {
+  if (typeof value !== "string" || /[\\\x00-\x20\x7f]/.test(value)) {
     return null;
   }
 
   try {
+    // URL() normalizes dot segments, so reject traversal in the original path first.
+    const rawPath = value.match(/^https?:\/\/[^/]+(\/[^?#]*)/i)?.[1];
+    if (!rawPath || rawPath.split("/").some(part => [".", ".."].includes(decodeURIComponent(part)))) {
+      return null;
+    }
     const url = new URL(value);
     const projectUrl = new URL(SUPABASE_URL);
     const prefix =
       `/storage/v1/object/public/${TESTIMONIAL_IMAGE_BUCKET}/`;
 
     if (
-      url.origin !== projectUrl.origin ||
+      url.origin !== projectUrl.origin || url.username || url.password ||
       !url.pathname.startsWith(prefix)
     ) {
       return null;
@@ -653,7 +678,7 @@ function getTestimonialImagePath(value) {
     const path = decodeURIComponent(url.pathname.slice(prefix.length));
 
     if (
-      /[\\\x00-\x1f\x7f]/.test(path) ||
+      !path.startsWith("testimonials/") || /[\\%\x00-\x20\x7f]/.test(path) ||
       path.split("/").some(part => !part || part === "." || part === "..")
     ) {
       return null;
@@ -663,6 +688,13 @@ function getTestimonialImagePath(value) {
   } catch {
     return null;
   }
+}
+
+async function removeTestimonialImages(imageUrls) {
+  const paths = [...new Set(imageUrls.map(getTestimonialImagePath).filter(Boolean))];
+  if (!paths.length) return;
+  const { error } = await db.storage.from(TESTIMONIAL_IMAGE_BUCKET).remove(paths);
+  if (error) throw new Error(`Testimonial Storage cleanup failed: ${error.message}`);
 }
 
 async function deleteTestimonial(id) {
@@ -681,7 +713,7 @@ async function deleteTestimonial(id) {
   try {
     const { data: testimonial, error: fetchError } = await db
       .from("agent_testimonials")
-      .select("image_urls")
+      .select("image_urls,thumbnail_url")
       .eq("id", id)
       .single();
 
@@ -692,24 +724,17 @@ async function deleteTestimonial(id) {
     const imageUrls = Array.isArray(testimonial.image_urls)
       ? testimonial.image_urls
       : [];
-    const paths = [...new Set(
-      imageUrls.map(getTestimonialImagePath).filter(Boolean)
-    )];
+    const cleanupUrls = [...imageUrls, testimonial.thumbnail_url];
+    const hasImages = cleanupUrls.some(url => getTestimonialImagePath(url));
 
-    if (paths.length > 0) {
+    if (hasImages) {
       failureMessage =
         "Unable to delete the testimonial images. The testimonial was kept. Check Storage delete permissions and try again.";
 
-      const { error: storageError } = await db.storage
-        .from(TESTIMONIAL_IMAGE_BUCKET)
-        .remove(paths);
-
-      if (storageError) {
-        throw storageError;
-      }
+      await removeTestimonialImages(cleanupUrls);
     }
 
-    failureMessage = paths.length > 0
+    failureMessage = hasImages
       ? "Images were removed, but the testimonial row could not be deleted. Check database delete permissions and retry deletion."
       : "Unable to delete the testimonial row. Check database delete permissions and try again.";
 
@@ -735,6 +760,313 @@ async function deleteTestimonial(id) {
   await loadTestimonials();
 }
 
+function getTestimonialCover(testimonial) {
+  const thumbnail = typeof testimonial.thumbnail_url === "string" ? testimonial.thumbnail_url.trim() : "";
+  const images = Array.isArray(testimonial.image_urls) ? testimonial.image_urls : [];
+  // No automatic YouTube covers for newly published posts.
+  return thumbnail || images[0] || "";
+}
+
+function validateContentImages(images, thumbnails, retainedCount = 0) {
+  if (retainedCount + images.length > 10) {
+    return `Keep 10 carousel images or fewer. ${retainedCount} existing + ${images.length} new = ${retainedCount + images.length}.`;
+  }
+  if (thumbnails.length > 1) return "Select only one thumbnail image.";
+  if ([...images, ...thumbnails].some(file => !/^image\//i.test(file.type || ""))) {
+    return "Select image files only for thumbnails and carousel images.";
+  }
+  return "";
+}
+
+const contentEditor = document.getElementById("content-editor");
+const editForm = document.getElementById("content-edit-form");
+const editFields = document.getElementById("edit-fields");
+const editTitle = document.getElementById("edit-title");
+const editArticle = document.getElementById("edit-article");
+const editYoutube = document.getElementById("edit-youtube-url");
+const editThumbnail = document.getElementById("edit-thumbnail");
+const editImages = document.getElementById("edit-images");
+const editMessage = document.getElementById("edit-message");
+let contentEditState = null;
+let editPreviewUrls = [];
+
+function attachEditButtons(container) {
+  container.querySelectorAll(".edit-post").forEach(button => {
+    button.addEventListener("click", () => openContentEditor(button.dataset.kind, button.dataset.id));
+  });
+}
+
+function openContentEditor(kind, id) {
+  if (contentEditState?.saving) return;
+  const post = (kind === "article" ? publishedVideos : publishedTestimonials).get(String(id));
+  if (!post) return;
+  editForm.reset();
+  contentEditState = {
+    kind, original: { ...post, image_urls: [...(post.image_urls || [])] },
+    retainedImages: [...(post.image_urls || [])], newImages: [], thumbnailMode: "keep", saving: false
+  };
+  editFields.disabled = false;
+  editTitle.value = post.title || "";
+  editArticle.value = post.article || "";
+  editYoutube.value = post.youtube_url || (post.youtube_id ? `https://www.youtube.com/watch?v=${encodeURIComponent(post.youtube_id)}` : "");
+  document.getElementById("edit-heading").textContent = kind === "article" ? "Edit Article" : "Edit Testimonial";
+  editArticle.required = kind === "testimonial";
+  editMessage.textContent = "";
+  renderEditImages();
+  if (!contentEditor.open) contentEditor.showModal();
+  editTitle.focus({ preventScroll: true });
+  contentEditor.scrollTop = 0;
+}
+
+function clearEditPreviews() {
+  editPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+  editPreviewUrls = [];
+}
+
+function renderEditImages() {
+  if (!contentEditState) return;
+  clearEditPreviews();
+  const state = contentEditState;
+  const preview = (source, alt, remove) => {
+    const figure = document.createElement("figure");
+    figure.className = "edit-photo";
+    const image = document.createElement("img");
+    image.src = source;
+    image.alt = alt;
+    figure.append(image);
+    if (remove) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary-button";
+      button.textContent = "Remove";
+      button.setAttribute("aria-label", `Remove ${alt.toLowerCase()}`);
+      button.addEventListener("click", remove);
+      figure.append(button);
+    }
+    return figure;
+  };
+  const fileUrl = file => {
+    const url = URL.createObjectURL(file);
+    editPreviewUrls.push(url);
+    return url;
+  };
+  const thumbnail = document.getElementById("edit-thumbnail-preview");
+  thumbnail.replaceChildren();
+  const thumbnailFile = editThumbnail.files?.[0];
+  const thumbnailUrl = state.thumbnailMode === "replace" && thumbnailFile
+    ? fileUrl(thumbnailFile)
+    : state.thumbnailMode === "keep" ? state.original.thumbnail_url : null;
+  if (thumbnailUrl) thumbnail.append(preview(thumbnailUrl, "Thumbnail"));
+  document.getElementById("edit-keep-thumbnail").disabled = !state.original.thumbnail_url;
+
+  const existing = document.getElementById("edit-existing-images");
+  existing.replaceChildren(...state.retainedImages.map((url, index) => preview(url, `Existing image ${index + 1}`, () => {
+    state.retainedImages.splice(index, 1);
+    renderEditImages();
+  })));
+  const added = document.getElementById("edit-new-images");
+  added.replaceChildren(...state.newImages.map((file, index) => preview(fileUrl(file), `New image ${index + 1}`, () => {
+    state.newImages.splice(index, 1);
+    renderEditImages();
+  })));
+  const total = state.retainedImages.length + state.newImages.length;
+  document.getElementById("edit-image-count").textContent = `${total} / 10 images (${state.retainedImages.length} existing, ${state.newImages.length} new)`;
+  editMessage.textContent = validateContentImages(state.newImages, Array.from(editThumbnail.files || []), state.retainedImages.length);
+}
+
+function closeContentEditor() {
+  if (contentEditState?.saving) return;
+  clearEditPreviews();
+  contentEditState = null;
+  editForm.reset();
+  contentEditor.close();
+}
+
+editThumbnail.addEventListener("change", () => {
+  if (!contentEditState) return;
+  contentEditState.thumbnailMode = editThumbnail.files.length ? "replace" : "keep";
+  renderEditImages();
+});
+editImages.addEventListener("change", () => {
+  if (!contentEditState) return;
+  contentEditState.newImages.push(...Array.from(editImages.files || []));
+  editImages.value = "";
+  renderEditImages();
+});
+document.getElementById("edit-keep-thumbnail").addEventListener("click", () => {
+  if (!contentEditState) return;
+  contentEditState.thumbnailMode = "keep";
+  editThumbnail.value = "";
+  renderEditImages();
+});
+document.getElementById("edit-remove-thumbnail").addEventListener("click", () => {
+  if (!contentEditState) return;
+  contentEditState.thumbnailMode = "remove";
+  editThumbnail.value = "";
+  renderEditImages();
+});
+document.getElementById("edit-cancel").addEventListener("click", closeContentEditor);
+contentEditor.addEventListener("cancel", event => {
+  event.preventDefault();
+  closeContentEditor();
+});
+contentEditor.addEventListener("close", () => {
+  clearEditPreviews();
+  contentEditState = null;
+});
+editForm.addEventListener("submit", saveContentEdits);
+
+async function persistArticleEdit(original, draft) {
+  const uploaded = [];
+  let imageUrls;
+  let thumbnailUrl;
+  try {
+    const added = await uploadVideoImages(draft.newImages);
+    uploaded.push(...added);
+    thumbnailUrl = draft.thumbnailMode === "remove" ? null : original.thumbnail_url || null;
+    if (draft.thumbnailMode === "replace") {
+      const thumbnails = await uploadVideoImages(draft.thumbnails);
+      uploaded.push(...thumbnails);
+      thumbnailUrl = thumbnails[0] || null;
+    }
+    imageUrls = [...draft.retainedImages, ...added];
+    const { data, error } = await db.from("education_videos")
+      .update({
+        title: draft.title, article: draft.article || null,
+        youtube_url: draft.youtube_url || null, youtube_id: draft.youtube_id || null,
+        image_urls: imageUrls, thumbnail_url: thumbnailUrl
+      })
+      .eq("id", original.id)
+      .select("id")
+      .single();
+    if (error || !data?.id) throw new Error(`Database update failed: ${error?.message || "No article was updated. Check UPDATE permissions."}`);
+  } catch (error) {
+    try {
+      await removeVideoImages(uploaded);
+    } catch (cleanupError) {
+      throw new Error(`${error.message} New-image rollback also failed: ${cleanupError.message}. Manual Storage cleanup may be needed.`);
+    }
+    throw error;
+  }
+
+  // Only after the row update succeeds may files no longer referenced by this post be removed.
+  const retained = new Set([...imageUrls, thumbnailUrl].map(getVideoImagePath).filter(Boolean));
+  const obsolete = [...(original.image_urls || []), original.thumbnail_url]
+    .filter(url => getVideoImagePath(url) && !retained.has(getVideoImagePath(url)));
+  try {
+    await removeVideoImages(obsolete);
+    return "";
+  } catch (error) {
+    return `Changes were saved, but obsolete image cleanup failed: ${error.message}. Manual Storage cleanup may be needed.`;
+  }
+}
+
+async function persistTestimonialEdit(original, draft) {
+  const uploaded = [];
+  let imageUrls;
+  let thumbnailUrl;
+  try {
+    const added = await uploadTestimonialImages(draft.newImages);
+    uploaded.push(...added);
+    thumbnailUrl = draft.thumbnailMode === "remove" ? null : original.thumbnail_url || null;
+    if (draft.thumbnailMode === "replace") {
+      const thumbnails = await uploadTestimonialImages(draft.thumbnails);
+      uploaded.push(...thumbnails);
+      thumbnailUrl = thumbnails[0] || null;
+    }
+    imageUrls = [...draft.retainedImages, ...added];
+    const { data, error } = await db.from("agent_testimonials")
+      .update({
+        title: draft.title, article: draft.article,
+        youtube_url: draft.youtube_url || null, youtube_id: draft.youtube_id || null,
+        image_urls: imageUrls, thumbnail_url: thumbnailUrl
+      })
+      .eq("id", original.id)
+      .select("id")
+      .single();
+    if (error || !data?.id) {
+      throw new Error(`Database update failed: ${error?.message || "No testimonial was updated. Check UPDATE permissions."}`);
+    }
+  } catch (error) {
+    try {
+      await removeTestimonialImages(uploaded);
+    } catch (cleanupError) {
+      throw new Error(`${error.message} New-image rollback also failed: ${cleanupError.message}. Manual Storage cleanup may be needed.`);
+    }
+    throw error;
+  }
+
+  // Compare validated paths, not URLs: query strings must not turn retained files into deletions.
+  const retained = new Set([...imageUrls, thumbnailUrl].map(getTestimonialImagePath).filter(Boolean));
+  const obsolete = [...(original.image_urls || []), original.thumbnail_url]
+    .filter(url => getTestimonialImagePath(url) && !retained.has(getTestimonialImagePath(url)));
+  try {
+    await removeTestimonialImages(obsolete);
+    return "";
+  } catch (error) {
+    return `Changes were saved, but obsolete testimonial image cleanup failed: ${error.message}. Manual Storage cleanup may be needed.`;
+  }
+}
+
+async function saveContentEdits(event) {
+  event.preventDefault();
+  const state = contentEditState;
+  if (!state || state.saving) return;
+  const youtubeUrl = editYoutube.value.trim();
+  const draft = {
+    title: editTitle.value.trim(), article: editArticle.value.trim(),
+    youtube_url: youtubeUrl, youtube_id: extractYoutubeId(youtubeUrl),
+    retainedImages: [...state.retainedImages], newImages: [...state.newImages],
+    thumbnails: Array.from(editThumbnail.files || []), thumbnailMode: state.thumbnailMode
+  };
+  const fileError = validateContentImages(draft.newImages, draft.thumbnails, draft.retainedImages.length);
+  if (!draft.title || fileError) {
+    editMessage.textContent = fileError || "Add a title first.";
+    return;
+  }
+  if (youtubeUrl && !isSupportedVideoYoutubeUrl(youtubeUrl, draft.youtube_id)) {
+    editMessage.textContent = "Enter a supported YouTube link, or leave it blank.";
+    return;
+  }
+  if (state.kind === "testimonial" && !draft.article) {
+    editMessage.textContent = "Add article text first.";
+    return;
+  }
+  state.saving = true;
+  editFields.disabled = true;
+  editMessage.textContent = "Saving changes...";
+  let warning;
+  try {
+    warning = state.kind === "testimonial"
+      ? await persistTestimonialEdit(state.original, draft)
+      : await persistArticleEdit(state.original, draft);
+    if (state.kind === "testimonial") {
+      try {
+        await loadTestimonials();
+      } catch {
+        warning = `${warning || "Testimonial changes saved successfully."} Reload the page to refresh the published list.`;
+      }
+    }
+  } catch (error) {
+    editMessage.textContent = `Unable to save changes. ${error.message}`;
+    return;
+  } finally {
+    state.saving = false;
+    editFields.disabled = false;
+  }
+  closeContentEditor();
+  if (state.kind === "testimonial") {
+    testimonialMessage.textContent = warning || "Testimonial changes saved successfully.";
+    return;
+  }
+  messageBox.textContent = warning || "Article changes saved successfully.";
+  try {
+    await loadVideos();
+  } catch {
+    messageBox.textContent += " Reload the page to refresh the published list.";
+  }
+}
+
 function extractYoutubeId(url) {
   if (!url) {
     return "";
@@ -758,12 +1090,6 @@ function extractYoutubeId(url) {
   } catch {
     return "";
   }
-}
-
-function getYoutubeThumbnail(id) {
-  return id
-    ? `https://img.youtube.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`
-    : "";
 }
 
 function trimWords(value, limit) {

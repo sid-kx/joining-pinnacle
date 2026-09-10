@@ -159,6 +159,7 @@
       overflow-wrap:anywhere;
     }
 
+    .admin-video p,
     .admin-testimonial p{
       margin:0;
       color:#999;
@@ -187,6 +188,29 @@
       padding:30px;
       text-align:center;
     }
+
+    .admin-field small{color:#aaa;font-size:12px;line-height:1.5}
+    .admin-actions,.edit-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .edit-post,.content-form .secondary-button{
+      border:1px solid #c7a35d;background:transparent;color:#dfbc79;
+      padding:10px 15px;border-radius:8px;cursor:pointer;
+    }
+    .content-editor{
+      width:min(760px,calc(100% - 24px));max-height:calc(100dvh - 32px);
+      margin:auto;padding:28px;border:1px solid #454039;border-radius:8px;
+      background:#151719;color:white;color-scheme:dark;overflow-y:auto;
+    }
+    .content-editor::backdrop{background:rgba(0,0,0,.75)}
+    .content-editor h2{font-size:28px;margin:0 0 14px;letter-spacing:0}
+    .content-editor fieldset{border:0;padding:0;margin:0;min-width:0;display:grid;gap:16px}
+    .edit-previews{display:flex;flex-wrap:wrap;gap:12px}
+    .edit-photo{width:112px;margin:0;display:grid;gap:6px}
+    .edit-photo img{width:112px;height:84px;object-fit:contain;background:#090a0b;border-radius:4px}
+    .content-form .edit-photo button{padding:7px 10px;font-size:12px;border-radius:4px;justify-self:stretch}
+    #edit-message{color:#dfbc79;line-height:1.5;margin:0 0 16px}
+    #edit-message:empty{display:none}
+    button:disabled{opacity:.55;cursor:wait}
+    @media(max-width:500px){.content-editor{padding:18px}.admin-actions{justify-content:flex-start}}
 
     @media(max-width:700px){
       .admin-video,
@@ -227,7 +251,7 @@
 
     <section class="add-panel">
 
-      <h2>Add a Video</h2>
+      <h2>Add an Article</h2>
 
       <p id="video-save-note">
         Add a title, article, optional YouTube link and up to 10 images.
@@ -263,6 +287,12 @@
         </div>
 
         <div class="admin-field">
+          <label for="video-thumbnail">Thumbnail</label>
+          <input id="video-thumbnail" type="file" accept="image/*" aria-describedby="video-thumbnail-note">
+          <small id="video-thumbnail-note">Optional. Used as the article card thumbnail.</small>
+        </div>
+
+        <div class="admin-field">
           <label for="video-images">Images (up to 10)</label>
           <input
             id="video-images"
@@ -273,7 +303,7 @@
         </div>
 
         <button type="submit">
-          Add Video
+          Add Article
         </button>
 
       </form>
@@ -323,7 +353,13 @@
         </div>
 
         <div class="admin-field">
-          <label for="testimonial-images">Images</label>
+          <label for="testimonial-thumbnail">Thumbnail</label>
+          <input id="testimonial-thumbnail" type="file" accept="image/*" aria-describedby="testimonial-thumbnail-note">
+          <small id="testimonial-thumbnail-note">Optional. Used as the testimonial card thumbnail.</small>
+        </div>
+
+        <div class="admin-field">
+          <label for="testimonial-images">Images (up to 10)</label>
           <input
             id="testimonial-images"
             type="file"
@@ -338,14 +374,14 @@
 
       </form>
 
-      <div id="testimonial-message"></div>
+      <div id="testimonial-message" role="status" aria-live="polite"></div>
 
     </section>
 
 
     <section class="add-panel">
 
-      <h2>Published Videos</h2>
+      <h2>Published Articles</h2>
 
       <div
         id="admin-video-list"
@@ -367,6 +403,50 @@
     </section>
 
   </main>
+
+  <dialog id="content-editor" class="content-editor" aria-labelledby="edit-heading">
+    <h2 id="edit-heading">Edit Post</h2>
+    <form id="content-edit-form" class="content-form">
+      <fieldset id="edit-fields">
+        <div class="admin-field">
+          <label for="edit-title">Title</label>
+          <input id="edit-title" type="text" required>
+        </div>
+        <div class="admin-field">
+          <label for="edit-article">Article</label>
+          <textarea id="edit-article"></textarea>
+        </div>
+        <div class="admin-field">
+          <label for="edit-youtube-url">YouTube link</label>
+          <input id="edit-youtube-url" type="url">
+        </div>
+        <div class="admin-field">
+          <label for="edit-thumbnail">Thumbnail</label>
+          <div id="edit-thumbnail-preview" class="edit-previews"></div>
+          <input id="edit-thumbnail" type="file" accept="image/*">
+          <div class="edit-actions">
+            <button id="edit-keep-thumbnail" class="secondary-button" type="button">Keep Current</button>
+            <button id="edit-remove-thumbnail" class="secondary-button" type="button">Remove Thumbnail</button>
+          </div>
+        </div>
+        <div class="admin-field">
+          <label>Existing carousel images</label>
+          <div id="edit-existing-images" class="edit-previews"></div>
+        </div>
+        <div class="admin-field">
+          <label for="edit-images">New carousel images</label>
+          <input id="edit-images" type="file" accept="image/*" multiple aria-describedby="edit-image-count">
+          <small id="edit-image-count"></small>
+          <div id="edit-new-images" class="edit-previews"></div>
+        </div>
+        <div id="edit-message" role="status" aria-live="polite"></div>
+        <div class="edit-actions">
+          <button type="submit">Save Changes</button>
+          <button id="edit-cancel" class="secondary-button" type="button">Cancel</button>
+        </div>
+      </fieldset>
+    </form>
+  </dialog>
 
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

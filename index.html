@@ -653,6 +653,7 @@
           youtube_url,
           youtube_id,
           image_urls,
+          thumbnail_url,
           created_at
         `)
         .order("created_at", {
@@ -688,12 +689,17 @@
       renderTestimonials();
     }
 
+    function getTestimonialCover(item) {
+      const thumbnail = typeof item.thumbnail_url === "string" ? item.thumbnail_url.trim() : "";
+      const images = Array.isArray(item.image_urls) ? item.image_urls : [];
+      return thumbnail || images[0] || "";
+    }
+
     function renderTestimonials() {
       const visibleItems = testimonials.slice(0, visibleTestimonials);
 
       testimonialGrid.innerHTML = visibleItems.map((item, index) => {
-        const images = Array.isArray(item.image_urls) ? item.image_urls : [];
-        const cover = images[0] || getYoutubeThumbnail(item.youtube_id) || "";
+        const cover = getTestimonialCover(item);
         const excerpt = trimWords(item.article, 22);
         const delay = (index % 3) * 80;
 
@@ -829,10 +835,6 @@
       testimonialModal.setAttribute("aria-hidden", "true");
       testimonialModalBody.innerHTML = "";
       document.body.style.overflow = "";
-    }
-
-    function getYoutubeThumbnail(id) {
-      return id ? `https://img.youtube.com/vi/${encodeURIComponent(id)}/hqdefault.jpg` : "";
     }
 
     function extractYoutubeId(url) {
