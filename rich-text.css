@@ -1,0 +1,35 @@
+/* Bounded editorial formatting shared by the editor and public post bodies. */
+.article-body{font-family:Inter,sans-serif;font-size:17px;line-height:1.85;color:#d0d0d0;overflow-wrap:anywhere}
+.article-body p{font-size:inherit;line-height:inherit;white-space:normal;margin:0 0 1.25em}
+.article-body h2{font-size:30px;line-height:1.25;margin:1.5em 0 .6em;color:#fff;letter-spacing:0}
+.article-body h3{font-size:24px;line-height:1.35;margin:1.4em 0 .6em;color:#fff;letter-spacing:0}
+.article-body h4{font-size:20px;line-height:1.4;margin:1.3em 0 .6em;color:#fff;letter-spacing:0}
+.article-body strong,.article-body b{font-weight:700}
+.article-body em,.article-body i{font-style:italic}
+.article-body ul,.article-body ol{padding-left:1.5em;margin:0 0 1.25em;list-style-position:outside}
+.article-body ul{list-style-type:disc}.article-body ol{list-style-type:decimal}
+.article-body li{margin:.4em 0}.article-body li p{margin:0}
+.article-body blockquote{border-left:3px solid var(--gold);margin:1.5em 0;padding:.25em 0 .25em 1.2em;color:#dfbc79}
+.article-body a{color:var(--gold2);text-decoration:underline;overflow-wrap:anywhere}
+.article-body a:hover{color:#fff}
+.article-body .ql-align-center{text-align:center}.article-body .ql-align-right{text-align:right}.article-body .ql-align-justify{text-align:justify}
+.article-body [class*="ql-indent-"]{margin-left:1.5em}
+.testimonial-post{display:block;color:inherit;text-decoration:none}
+.rich-editor{min-width:0;border:1px solid #555;border-radius:8px;background:#0d0e0f;overflow:visible}
+.rich-editor .ql-toolbar.ql-snow{border:0;border-bottom:1px solid #555;border-radius:8px 8px 0 0;background:#202326;padding:8px;display:flex;flex-wrap:wrap;gap:4px}
+.rich-editor .ql-container.ql-snow{border:0;font-family:Inter,sans-serif;font-size:16px}
+.rich-editor .ql-editor{min-height:180px;max-height:420px;padding:16px;line-height:1.65;color:#eee;overflow-wrap:anywhere}
+.rich-editor .ql-editor.ql-blank::before{color:#aaa}
+.content-form .ql-toolbar button{padding:3px 5px;width:30px;height:30px;background:transparent;border-radius:4px;color:#ddd;font-weight:400}
+.rich-editor .ql-snow .ql-stroke{stroke:#ddd}.rich-editor .ql-snow .ql-fill{fill:#ddd}
+.rich-editor .ql-snow .ql-picker{color:#ddd;height:30px}
+.rich-editor .ql-snow .ql-picker-label{padding-top:3px}
+.rich-editor .ql-snow .ql-picker-options{background:#25282c;border-color:#666;color:#eee;z-index:10;max-height:220px;overflow-y:auto}
+.rich-editor .ql-snow .ql-picker.ql-size .ql-picker-item[data-value]::before,.rich-editor .ql-snow .ql-picker.ql-size .ql-picker-label[data-value]::before{content:attr(data-value);font-size:14px}
+.rich-editor .ql-snow .ql-picker.ql-font .ql-picker-item[data-value]::before,.rich-editor .ql-snow .ql-picker.ql-font .ql-picker-label[data-value]::before{content:attr(data-value)}
+.rich-editor .ql-snow .ql-tooltip{background:#25282c;border-color:#666;color:white;z-index:15;white-space:normal;max-width:100%;box-shadow:0 5px 20px #0008}
+.rich-editor .ql-snow .ql-tooltip input{padding:5px;height:30px;max-width:100%}
+.rich-editor .ql-snow .ql-tooltip a{color:#dfbc79}
+.rich-editor .ql-toolbar button:hover,.rich-editor .ql-toolbar button.ql-active{background:#353a3d}
+.rich-editor:focus-within{border-color:#c7a35d}
+@media(max-width:600px){.article-body{font-size:16px}.article-body h2{font-size:26px}.article-body h3{font-size:22px}.rich-editor .ql-editor{padding:12px}}

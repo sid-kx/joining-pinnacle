@@ -1,4 +1,4 @@
-// Dependency-free DOM/Supabase mocks. Never contacts a real project.
+// DOM/Supabase mocks with the real sanitizer. Never contacts a real project.
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -6,6 +6,10 @@ const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'admin.html'), 'utf8');
 const source = fs.readFileSync(path.join(root, 'admin.js'), 'utf8');
+const { JSDOM } = require('jsdom');
+const richWindow = new JSDOM('', { runScripts: 'outside-only' }).window;
+richWindow.DOMPurify = require('dompurify')(richWindow);
+richWindow.eval(fs.readFileSync(path.join(root, 'rich-text.js'), 'utf8'));
 const origin = 'https://cms-test.supabase.co';
 const imageUrl = (name, bucket = 'video-images') => `${origin}/storage/v1/object/public/${bucket}/${bucket === 'video-images' ? 'videos' : 'testimonials'}/${name}.jpg`;
 const file = name => ({ name: `${name}.jpg`, type: 'image/jpeg' });
@@ -51,7 +55,7 @@ class Element {
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
 }
 
-async function setup() {
+async function setup(slugsEnabled = false) {
   const nodes = {};
   for (const match of html.matchAll(/<(\w+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)) {
     const node = nodes[match[3]] = new Element(match[1]);
@@ -78,18 +82,19 @@ async function setup() {
         if (failures[query.action]) return { data: null, error: { message: `${query.action} denied` } };
         if (failures.noId === query.action) return { data: null, error: null };
         if (query.action === 'insert') { const data = { ...query.payload, id: 'new-post' }; rows[table].push(data); return { data: { id: data.id }, error: null }; }
-        const row = rows[table].find(item => item.id === query.id);
+        const row = rows[table].find(item => item[query.key || 'id'] === query.id);
         if (query.action === 'update') { if (!row) return { data: null, error: { message: 'No matching row' } }; Object.assign(row, query.payload); return { data: { id: row.id }, error: null }; }
         if (query.action === 'delete') { rows[table] = rows[table].filter(item => item !== row); return { data: row ? { id: row.id } : null, error: null }; }
-        return { data: query.id ? row : rows[table], error: null };
+        return { data: query.id ? row || null : rows[table], error: null };
       };
       return {
         select(fields) { query.fields = fields; return this; },
-        eq(key, value) { query.id = value; return this; },
+        eq(key, value) { query.key = key; query.id = value; return this; },
         insert(payload) { query.action = 'insert'; query.payload = payload; return this; },
         update(payload) { query.action = 'update'; query.payload = payload; return this; },
         delete() { query.action = 'delete'; return this; },
-        async single() { return run(); }, async maybeSingle() { return run(); }, async order() { return run(); }
+        async single() { return run(); }, async maybeSingle() { return run(); }, async order() { return run(); },
+        async limit() { return slugsEnabled ? { data: [], error: null } : { data: null, error: { code: '42703', message: 'column slug does not exist' } }; }
       };
     },
     storage: { from(bucket) { return {
@@ -109,8 +114,10 @@ async function setup() {
     document: { getElementById: id => nodes[id], createElement: tag => new Element(tag), querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)) },
     db, SUPABASE_URL: origin, URL: MockURL, crypto: { randomUUID: () => `unique-${++uuid}` },
     window: { location: {}, confirm: () => true }, alert: message => calls.push({ action: 'alert', message }),
-    console: { error() {} }, Map, Set
+    console: { error() {} }, Map, Set, RichText: richWindow.RichText
   });
+  vm.runInContext(fs.readFileSync(path.join(root, 'content.js'), 'utf8'), context);
+  context.Content = context.window.Content;
   vm.runInContext(source, context);
   await new Promise(resolve => setImmediate(resolve));
   const run = expression => vm.runInContext(expression, context);
@@ -121,6 +128,31 @@ async function setup() {
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
 const writes = calls => calls.filter(call => ['insert', 'update', 'delete', 'upload', 'remove'].includes(call.action));
+
+for (const [kind, table, prefix, formId] of [
+  ['article', 'education_videos', 'video', 'video-form'],
+  ['testimonial', 'agent_testimonials', 'testimonial', 'testimonial-form']
+]) {
+  test(`${kind} publishing/editing combines sanitized rich text, stable slugs and separate media`, async () => {
+    const h = await setup(true);
+    const rich = richWindow.RichText.serialize('<h2>Heading</h2><p><strong>Bold</strong> and <em>italic</em>.</p><ul><li>Point</li></ul><script>alert(1)</script>');
+    h.nodes[`${prefix}-title`].value = 'A Clearer Future';
+    h.nodes[`${prefix}-article`].value = rich;
+    h.nodes[`${prefix}-images`].files = [file('gallery')];
+    h.nodes[`${prefix}-thumbnail`].files = [file('cover-new')];
+    await h.nodes[formId].dispatch('submit');
+    const row = h.rows[table].find(item => item.id === 'new-post');
+    assert.equal(row.slug, 'a-clearer-future'); assert.equal(row.article, rich);
+    assert.equal(row.image_urls.length, 1); assert(row.thumbnail_url);
+    assert(!row.image_urls.includes(row.thumbnail_url));
+    h.context.openContentEditor(kind, 'new-post');
+    h.nodes['edit-title'].value = 'A Different Title';
+    await h.nodes['content-edit-form'].dispatch('submit');
+    assert.equal(row.slug, 'a-clearer-future'); assert.equal(row.article, rich);
+    assert.equal(row.title, 'A Different Title');
+    assert(!h.calls.some(call => call.action === 'remove'));
+  });
+}
 
 test('Single optional thumbnail inputs and published Edit/Delete actions', async () => {
   const h = await setup();
@@ -444,7 +476,7 @@ test('Testimonial deletion handles thumbnail-only and cleanup/database errors cl
 
 test('Public testimonial query/cover supports thumbnail without YouTube generation; stale guards removed', async () => {
   const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  const query = index.slice(index.indexOf('.from("agent_testimonials")'), index.indexOf('.order(', index.indexOf('.from("agent_testimonials")')));
+  const query = index.slice(index.indexOf('async function loadTestimonials'), index.indexOf('if (error)', index.indexOf('async function loadTestimonials')));
   assert.match(query, /thumbnail_url/);
   const helper = index.match(/function getTestimonialCover\(item\) \{[\s\S]*?\n    \}/)[0];
   const ctx = vm.createContext({}); vm.runInContext(helper, ctx);
@@ -482,4 +514,5 @@ test('Storage deletion failure keeps article row; cover helpers do not generate 
     }
   }
   console.log(`${tests.length} CMS test groups passed; JavaScript syntax checks passed.`);
+  richWindow.close();
 })().catch(error => { console.error(error); process.exitCode = 1; });

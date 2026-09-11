@@ -1,0 +1,15 @@
+{
+  "name": "pinnacle-content-site",
+  "private": true,
+  "scripts": {
+    "vendor": "node scripts/vendor.cjs",
+    "test": "node tests/cms.test.cjs && node tests/content.test.cjs",
+    "build": "node scripts/build-pages.cjs",
+    "dev": "node scripts/preview.cjs"
+  },
+  "dependencies": {
+    "dompurify": "3.4.15",
+    "jsdom": "29.1.1",
+    "quill": "2.0.2"
+  }
+}

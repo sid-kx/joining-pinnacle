@@ -66,21 +66,7 @@ async function loadVideos() {
   const {
     data: videos,
     error
-  } = await db
-    .from("education_videos")
-    .select(`
-      id,
-      youtube_id,
-      youtube_url,
-      title,
-      article,
-      image_urls,
-      thumbnail_url,
-      created_at
-    `)
-    .order("created_at", {
-      ascending: false
-    });
+  } = await Content.select(db, "education_videos", "id,youtube_id,youtube_url,title,article,image_urls,thumbnail_url,created_at", query => query.order("created_at", { ascending: false }));
 
   if (error) {
     console.error("Video load error:", error);
@@ -180,7 +166,7 @@ function getVideoContentDraft() {
 
   return {
     title: videoTitle.value.trim(),
-    article: videoArticle.value.trim(),
+    article: RichText.read(videoArticle),
     youtube_url: youtubeUrl || null,
     youtube_id: extractYoutubeId(youtubeUrl) || null,
     images: Array.from(videoImages.files || []),
@@ -237,18 +223,14 @@ async function handleVideoSubmit(event) {
     imageUrls = await uploadVideoImages(draft.images);
     thumbnailUrls = await uploadVideoImages(draft.thumbnails);
 
-    const { data, error } = await db
-      .from("education_videos")
-      .insert({
+    const { data, error } = await Content.write(db, "education_videos", {
         title: draft.title,
         article: draft.article || null,
         youtube_url: draft.youtube_url,
         youtube_id: draft.youtube_id,
         image_urls: imageUrls,
         thumbnail_url: thumbnailUrls[0] || null
-      })
-      .select("id")
-      .single();
+      });
 
     if (error) {
       throw new Error(`Database insert failed: ${error.message}`);
@@ -388,13 +370,13 @@ async function handleTestimonialSubmit(event) {
   if (testimonialPublishing) return;
 
   const title = testimonialTitle.value.trim();
-  const article = testimonialArticle.value.trim();
+  const article = RichText.read(testimonialArticle);
   const youtubeUrl = testimonialYoutubeUrl.value.trim();
   const youtubeId = extractYoutubeId(youtubeUrl);
   const files = Array.from(testimonialImages.files || []);
   const thumbnails = Array.from(testimonialThumbnail.files || []);
   const fileError = validateContentImages(files, thumbnails);
-  if (!title || !article || fileError) {
+  if (!title || !RichText.text(article) || fileError) {
     testimonialMessage.textContent = fileError || "Add a title and article first.";
     return;
   }
@@ -414,16 +396,13 @@ async function handleTestimonialSubmit(event) {
     uploaded.push(...imageUrls);
     const thumbnailUrls = await uploadTestimonialImages(thumbnails);
     uploaded.push(...thumbnailUrls);
-    const { data, error } = await db.from("agent_testimonials")
-      .insert({
+    const { data, error } = await Content.write(db, "agent_testimonials", {
         title, article,
         youtube_url: youtubeUrl || null,
         youtube_id: youtubeId || null,
         image_urls: imageUrls,
         thumbnail_url: thumbnailUrls[0] || null
-      })
-      .select("id")
-      .single();
+      });
     if (error || !data?.id) {
       throw new Error(`Database insert failed: ${error?.message || "No testimonial ID was returned."}`);
     }
@@ -519,21 +498,7 @@ async function loadTestimonials() {
   const {
     data: testimonials,
     error
-  } = await db
-    .from("agent_testimonials")
-    .select(`
-      id,
-      title,
-      article,
-      youtube_url,
-      youtube_id,
-      image_urls,
-      thumbnail_url,
-      created_at
-    `)
-    .order("created_at", {
-      ascending: false
-    });
+  } = await Content.select(db, "agent_testimonials", "id,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at", query => query.order("created_at", { ascending: false }));
 
   if (error) {
     console.error("Testimonial load error:", error);
@@ -807,10 +772,10 @@ function openContentEditor(kind, id) {
   };
   editFields.disabled = false;
   editTitle.value = post.title || "";
-  editArticle.value = post.article || "";
+  RichText.set(editArticle, post.article || "");
   editYoutube.value = post.youtube_url || (post.youtube_id ? `https://www.youtube.com/watch?v=${encodeURIComponent(post.youtube_id)}` : "");
   document.getElementById("edit-heading").textContent = kind === "article" ? "Edit Article" : "Edit Testimonial";
-  editArticle.required = kind === "testimonial";
+  editArticle.required = false;
   editMessage.textContent = "";
   renderEditImages();
   if (!contentEditor.open) contentEditor.showModal();
@@ -930,15 +895,11 @@ async function persistArticleEdit(original, draft) {
       thumbnailUrl = thumbnails[0] || null;
     }
     imageUrls = [...draft.retainedImages, ...added];
-    const { data, error } = await db.from("education_videos")
-      .update({
+    const { data, error } = await Content.write(db, "education_videos", {
         title: draft.title, article: draft.article || null,
         youtube_url: draft.youtube_url || null, youtube_id: draft.youtube_id || null,
         image_urls: imageUrls, thumbnail_url: thumbnailUrl
-      })
-      .eq("id", original.id)
-      .select("id")
-      .single();
+      }, original);
     if (error || !data?.id) throw new Error(`Database update failed: ${error?.message || "No article was updated. Check UPDATE permissions."}`);
   } catch (error) {
     try {
@@ -975,15 +936,11 @@ async function persistTestimonialEdit(original, draft) {
       thumbnailUrl = thumbnails[0] || null;
     }
     imageUrls = [...draft.retainedImages, ...added];
-    const { data, error } = await db.from("agent_testimonials")
-      .update({
+    const { data, error } = await Content.write(db, "agent_testimonials", {
         title: draft.title, article: draft.article,
         youtube_url: draft.youtube_url || null, youtube_id: draft.youtube_id || null,
         image_urls: imageUrls, thumbnail_url: thumbnailUrl
-      })
-      .eq("id", original.id)
-      .select("id")
-      .single();
+      }, original);
     if (error || !data?.id) {
       throw new Error(`Database update failed: ${error?.message || "No testimonial was updated. Check UPDATE permissions."}`);
     }
@@ -1014,7 +971,7 @@ async function saveContentEdits(event) {
   if (!state || state.saving) return;
   const youtubeUrl = editYoutube.value.trim();
   const draft = {
-    title: editTitle.value.trim(), article: editArticle.value.trim(),
+    title: editTitle.value.trim(), article: RichText.read(editArticle),
     youtube_url: youtubeUrl, youtube_id: extractYoutubeId(youtubeUrl),
     retainedImages: [...state.retainedImages], newImages: [...state.newImages],
     thumbnails: Array.from(editThumbnail.files || []), thumbnailMode: state.thumbnailMode
@@ -1028,7 +985,7 @@ async function saveContentEdits(event) {
     editMessage.textContent = "Enter a supported YouTube link, or leave it blank.";
     return;
   }
-  if (state.kind === "testimonial" && !draft.article) {
+  if (state.kind === "testimonial" && !RichText.text(draft.article)) {
     editMessage.textContent = "Add article text first.";
     return;
   }
@@ -1094,7 +1051,7 @@ function extractYoutubeId(url) {
 
 function trimWords(value, limit) {
   const words =
-    String(value || "")
+    RichText.text(value)
       .trim()
       .split(/\s+/)
       .filter(Boolean);
@@ -1125,4 +1082,5 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+RichText.mount();
 initializeAdmin();

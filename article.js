@@ -1,6 +1,8 @@
 const articleContent = document.getElementById("article-content");
 const articleStatus = document.getElementById("article-status");
 const articleMedia = document.getElementById("article-media");
+const pageKind = document.body.dataset.contentKind || "article";
+const pageLabel = pageKind === "testimonial" ? "Testimonial" : "Article";
 
 function articleElement(tag, className, text) {
   const element = document.createElement(tag);
@@ -11,7 +13,7 @@ function articleElement(tag, className, text) {
 
 function renderArticleCarousel(images, title) {
   const carousel = articleElement("section", "testimonial-carousel");
-  carousel.setAttribute("aria-label", "Article photos");
+  carousel.setAttribute("aria-label", `${pageLabel} photos`);
   carousel.setAttribute("aria-roledescription", "carousel");
   const stage = articleElement("div", "testimonial-carousel-stage");
   const photo = articleElement("img");
@@ -69,13 +71,8 @@ function renderArticle(article) {
   if (images.length) articleMedia.append(renderArticleCarousel(images, title));
 
   const body = document.getElementById("article-body");
-  body.replaceChildren();
-  const text = typeof article.article === "string" ? article.article.trim() : "";
-  if (text) {
-    text.split(/\r?\n\s*\r?\n/).forEach(paragraph => {
-      body.append(articleElement("p", "", paragraph));
-    });
-  }
+  body.innerHTML = RichText.toHTML(article.article);
+  const text = RichText.text(article.article);
   const date = document.getElementById("article-date");
   const published = new Date(article.created_at);
   date.hidden = !article.created_at || Number.isNaN(published.getTime());
@@ -89,7 +86,7 @@ function renderArticle(article) {
 }
 
 function updateArticleMetadata(article, text, images) {
-  // Browser-only metadata for this template. Static generation must emit it in raw HTML later.
+  // The static build runs this same renderer to include metadata in the initial HTML.
   const title = article.title || "Pinnacle Education";
   const description = (text || title).replace(/\s+/g, " ").slice(0, 160);
   document.title = `${title} | Pinnacle Realty`;
@@ -109,43 +106,62 @@ function updateArticleMetadata(article, text, images) {
   const cover = article.thumbnail_url || images[0];
   if (cover) meta("property", "og:image", cover);
 
-  const url = new URL("article.html", window.location.href);
-  url.searchParams.set("id", article.id);
-  const canonical = document.head.querySelector('link[rel="canonical"]') || document.createElement("link");
-  canonical.rel = "canonical";
-  canonical.href = url.href;
-  document.head.append(canonical);
-  meta("property", "og:url", url.href);
+  const url = Content.validSlug(article.slug) ? Content.origin + Content.path(pageKind, article.slug) : null;
+  if (url) {
+    const canonical = document.head.querySelector('link[rel="canonical"]') || document.createElement("link");
+    canonical.rel = "canonical";
+    canonical.href = url;
+    document.head.append(canonical);
+    meta("property", "og:url", url);
+  }
   const structured = document.getElementById("article-structured-data") || document.createElement("script");
   structured.id = "article-structured-data";
   structured.type = "application/ld+json";
-  const data = { "@context": "https://schema.org", "@type": "Article", headline: title, description, url };
+  const data = { "@context": "https://schema.org", "@type": "Article", headline: title, description };
+  if (url) data.url = url;
   if (cover) data.image = [cover];
   if (article.created_at && !Number.isNaN(Date.parse(article.created_at))) data.datePublished = article.created_at;
-  structured.textContent = JSON.stringify(data);
+  structured.textContent = JSON.stringify(data).replace(/</g, "\\u003c");
   document.head.append(structured);
 }
 
 async function loadArticle() {
-  const id = new URLSearchParams(window.location.search).get("id");
-  if (!id) {
-    articleStatus.textContent = "No article selected. Return to Education to choose an article.";
+  if (window.__BUILD_POST__) { renderArticle(window.__BUILD_POST__); return; }
+  const params = new URLSearchParams(window.location.search);
+  const match = window.location.pathname.match(/^\/(articles|testimonials)\/([a-z0-9-]+)\/?$/);
+  const slug = match?.[2] || params.get("slug");
+  const id = params.get("id");
+  if ((!slug && !id) || (slug && !Content.validSlug(slug))) {
+    articleStatus.textContent = `No ${pageKind} selected. Use the back link to choose a post.`;
     return;
   }
+  const snapshot = document.getElementById("post-snapshot");
+  if (snapshot) {
+    try { const post = JSON.parse(snapshot.textContent); if (post.slug === slug) renderArticle(post); } catch { /* Fetch below remains authoritative. */ }
+  }
   try {
-    const { data, error } = await db.from("education_videos")
-      .select("id,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at")
-      .eq("id", id)
-      .maybeSingle();
+    const table = pageKind === "testimonial" ? "agent_testimonials" : "education_videos";
+    if (slug && !(await Content.supportsSlugs(db, table))) throw new Error("Slug migration is not yet available.");
+    const { data, error } = await Content.select(db, table,
+      "id,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at",
+      query => query.eq(slug ? "slug" : "id", slug || id).maybeSingle());
     if (error) throw error;
     if (!data) {
-      articleStatus.textContent = "Article not found. It may have been removed.";
+      articleContent.hidden = true;
+      articleStatus.hidden = false;
+      articleStatus.textContent = `${pageLabel} not found. It may have been removed.`;
       return;
+    }
+    if (Content.validSlug(data.slug) && !match) {
+      await Content.loadRoutes();
+      const target = Content.url(pageKind, data);
+      if (target !== window.location.pathname + window.location.search) { window.location.replace(target); return; }
     }
     renderArticle(data);
   } catch (error) {
     console.error("Unable to load article:", error);
-    articleStatus.textContent = "Unable to load this article. Please try again later.";
+    articleStatus.hidden = false;
+    articleStatus.textContent = `Unable to refresh this ${pageKind}. Please try again later.`;
   }
 }
 

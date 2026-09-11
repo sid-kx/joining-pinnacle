@@ -867,6 +867,7 @@
   <script src="supabase.js"></script>
 
   <script src="script.js"></script>
+  <script src="content.js"></script>
 
 
 
@@ -923,26 +924,7 @@
       const {
         data,
         error
-      } = await db
-        .from("education_videos")
-        .select(
-          `
-            id,
-            youtube_id,
-            youtube_url,
-            title,
-            article,
-            image_urls,
-            thumbnail_url,
-            created_at
-          `
-        )
-        .order(
-          "created_at",
-          {
-            ascending:false
-          }
-        );
+      } = await Content.select(db, "education_videos", "id,youtube_id,youtube_url,title,article,image_urls,thumbnail_url,created_at", query => query.order("created_at", { ascending: false }));
 
 
       if(error){
@@ -1006,6 +988,7 @@
       }
 
 
+      await Content.loadRoutes();
       renderEducationVideos();
 
     }
@@ -1031,7 +1014,7 @@
     function renderEducationVideos() {
       educationGrid.innerHTML = educationVideos.slice(0, visibleVideoCount).map((article, index) => {
         const cover = getEducationVideoCover(article);
-        const href = `article.html?id=${encodeURIComponent(article.id)}`;
+        const href = Content.url("article", article);
         return `
           <a class="education-video-card" href="${escapeEducationHtml(href)}"
              style="animation-delay:${(index % 3) * 80}ms">
