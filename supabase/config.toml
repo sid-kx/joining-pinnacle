@@ -1,0 +1,5 @@
+project_id = "joining-pinnacle"
+
+[functions.rebuild-site]
+verify_jwt = true
+entrypoint = "./functions/rebuild-site/index.ts"

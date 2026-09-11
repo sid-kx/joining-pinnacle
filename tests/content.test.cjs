@@ -131,6 +131,14 @@ test('static article and testimonial HTML contains unique metadata and full sani
     const page = renderPage(kind, post), doc = new JSDOM(page.html).window.document;
     assert.equal(doc.querySelector('#article-content').hidden, false);
     assert.equal(doc.querySelector('#article-title').textContent, 'My Title');
+    const author = doc.querySelector('.article-author');
+    const structured = JSON.parse(doc.querySelector('#article-structured-data').textContent);
+    if (kind === 'article') {
+      assert.equal(author.textContent, 'Jag Saini \u00b7 Broker of Record');
+      assert.equal(doc.querySelector('#article-title').nextElementSibling, author);
+      assert.equal(author.nextElementSibling.id, 'article-date');
+      assert.deepEqual(structured.author, { '@type': 'Person', name: 'Jag Saini', jobTitle: 'Broker of Record' });
+    } else { assert.equal(author, null); assert(!structured.author); }
     assert.equal(doc.querySelector('#article-body h2').textContent, 'BIG HEADING');
     assert.equal(doc.querySelector('#article-body ul li').textContent, 'Bullet one');
     assert.equal(doc.querySelector('link[rel="canonical"]').href, `https://join.pinnaclerealty.ca${page.route}`);

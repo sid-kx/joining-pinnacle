@@ -1,4 +1,6 @@
 /* Bounded editorial formatting shared by the editor and public post bodies. */
+.article-author{margin:0 0 12px;color:#d0d0d0;font:16px/1.6 Inter,sans-serif;overflow-wrap:anywhere}
+.article-author strong{font-weight:600;color:#eee}.article-author-separator{color:var(--gold);padding:0 3px}
 .article-body{font-family:Inter,sans-serif;font-size:17px;line-height:1.85;color:#d0d0d0;overflow-wrap:anywhere}
 .article-body p{font-size:inherit;line-height:inherit;white-space:normal;margin:0 0 1.25em}
 .article-body h2{font-size:30px;line-height:1.25;margin:1.5em 0 .6em;color:#fff;letter-spacing:0}

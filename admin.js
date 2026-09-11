@@ -20,6 +20,23 @@ const TESTIMONIAL_IMAGE_BUCKET = "testimonial-images";
 const VIDEO_IMAGE_BUCKET = "video-images";
 const publishedVideos = new Map();
 const publishedTestimonials = new Map();
+const rebuildMessages = new WeakMap();
+
+async function requestSiteRebuild(statusElement) {
+  const requestId = Symbol();
+  rebuildMessages.set(statusElement, requestId);
+  const savedMessage = statusElement.textContent;
+  let status;
+  try {
+    const { data, error } = await db.functions.invoke("rebuild-site", { body: {} });
+    if (error || data?.accepted !== true) throw new Error("Rebuild was not accepted.");
+    status = " Static SEO pages are being refreshed.";
+  } catch {
+    status = " Content changes were saved, but the static SEO rebuild could not be started. Retry the Pages workflow in GitHub Actions.";
+  }
+  // Do not replace feedback from a newer CMS operation while dispatch was pending.
+  if (rebuildMessages.get(statusElement) === requestId && statusElement.textContent.startsWith(savedMessage)) statusElement.textContent += status;
+}
 
 async function initializeAdmin() {
   const {
@@ -258,12 +275,14 @@ async function handleVideoSubmit(event) {
 
   messageBox.textContent = `Article published successfully. Database ID: ${publishedId}`;
   form.reset();
+  const rebuild = requestSiteRebuild(messageBox);
   try {
     await loadVideos();
   } catch (error) {
     messageBox.textContent += " Unable to refresh the list. Reload to see the published article.";
     console.error("Video list refresh failed:", error);
   }
+  await rebuild;
 }
 
 function isSupportedVideoYoutubeUrl(value, youtubeId) {
@@ -423,12 +442,14 @@ async function handleTestimonialSubmit(event) {
   }
   testimonialMessage.textContent = `Testimonial published successfully. Database ID: ${publishedId}`;
   testimonialForm.reset();
+  const rebuild = requestSiteRebuild(testimonialMessage);
   try {
     await loadTestimonials();
   } catch (error) {
     testimonialMessage.textContent += " Reload the page to refresh the published list.";
     console.error("Testimonial list refresh failed:", error);
   }
+  await rebuild;
 }
 
 async function deleteVideo(id) {
@@ -464,15 +485,15 @@ async function deleteVideo(id) {
       ? "Video images were removed, but database deletion failed. Check database delete permissions and retry."
       : "Video database deletion failed. Check database delete permissions and retry.";
 
-    const { error: deleteError } = await db
+    const { data: deleted, error: deleteError } = await db
       .from("education_videos")
       .delete()
       .eq("id", id)
       .select("id")
       .single();
 
-    if (deleteError) {
-      throw deleteError;
+    if (deleteError || !deleted?.id) {
+      throw deleteError || new Error("No deleted article ID was returned.");
     }
   } catch (error) {
     console.error("Video deletion failed:", error);
@@ -480,7 +501,10 @@ async function deleteVideo(id) {
     return;
   }
 
-  await loadVideos();
+  messageBox.textContent = "Article deleted successfully.";
+  const rebuild = requestSiteRebuild(messageBox);
+  try { await loadVideos(); } catch { messageBox.textContent += " Reload the page to refresh the list."; }
+  await rebuild;
 }
 
 async function loadTestimonials() {
@@ -703,15 +727,15 @@ async function deleteTestimonial(id) {
       ? "Images were removed, but the testimonial row could not be deleted. Check database delete permissions and retry deletion."
       : "Unable to delete the testimonial row. Check database delete permissions and try again.";
 
-    const { error: deleteError } = await db
+    const { data: deleted, error: deleteError } = await db
       .from("agent_testimonials")
       .delete()
       .eq("id", id)
       .select("id")
       .single();
 
-    if (deleteError) {
-      throw deleteError;
+    if (deleteError || !deleted?.id) {
+      throw deleteError || new Error("No deleted testimonial ID was returned.");
     }
   } catch (error) {
     console.error("Testimonial delete error:", error);
@@ -722,7 +746,10 @@ async function deleteTestimonial(id) {
     return;
   }
 
-  await loadTestimonials();
+  testimonialMessage.textContent = "Testimonial deleted successfully.";
+  const rebuild = requestSiteRebuild(testimonialMessage);
+  try { await loadTestimonials(); } catch { testimonialMessage.textContent += " Reload the page to refresh the list."; }
+  await rebuild;
 }
 
 function getTestimonialCover(testimonial) {
@@ -1014,14 +1041,17 @@ async function saveContentEdits(event) {
   closeContentEditor();
   if (state.kind === "testimonial") {
     testimonialMessage.textContent = warning || "Testimonial changes saved successfully.";
+    await requestSiteRebuild(testimonialMessage);
     return;
   }
   messageBox.textContent = warning || "Article changes saved successfully.";
+  const rebuild = requestSiteRebuild(messageBox);
   try {
     await loadVideos();
   } catch {
     messageBox.textContent += " Reload the page to refresh the published list.";
   }
+  await rebuild;
 }
 
 function extractYoutubeId(url) {

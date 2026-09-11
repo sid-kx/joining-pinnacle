@@ -19,10 +19,10 @@ were changed by this task.
    source. Commit/push these files to `main`, or run the Pages workflow manually.
    The workflow installs dependencies, runs tests, builds, then deploys `dist`.
    This task did not commit, push, or run the workflow.
-4. Re-run the workflow after publishing, editing, or deleting CMS content. GitHub
-   Pages cannot rebuild itself from a browser Supabase write. No GitHub tokens or
-   service-role credentials belong in the client. Automated Supabase-to-build
-   dispatch can be added separately using a trusted server-side integration.
+4. Configure the secure Edge Function described in `AUTOMATIC_REBUILDS.md` to
+   request rebuilds after CMS publishing, editing, or deletion. Until configured,
+   re-run the workflow manually. No GitHub tokens or service-role credentials
+   belong in the client.
 
 ## URLs and SEO
 

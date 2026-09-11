@@ -73,6 +73,11 @@ async function setup(slugsEnabled = false) {
   };
   const calls = [], failures = {}, revoked = [];
   const db = {
+    functions: { async invoke(name, options) {
+      calls.push({ action: 'rebuild', name, options });
+      if (failures.rebuildThrows) throw new Error('Network unavailable');
+      return failures.rebuild ? { error: { message: 'Dispatch failed' } } : { data: { accepted: true }, error: null };
+    } },
     auth: { async getSession() { return { data: { session: { user: { id: 'admin' } } } }; }, async signOut() {} },
     from(table) {
       const query = { table, action: 'read' };
@@ -128,6 +133,60 @@ async function setup(slugsEnabled = false) {
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
 const writes = calls => calls.filter(call => ['insert', 'update', 'delete', 'upload', 'remove'].includes(call.action));
+
+for (const [kind, table, prefix, formId, id, messageId] of [
+  ['article', 'education_videos', 'video', 'video-form', 'article-1', 'admin-message'],
+  ['testimonial', 'agent_testimonials', 'testimonial', 'testimonial-form', 'testimonial-1', 'testimonial-message']
+]) {
+  for (const action of ['insert', 'update', 'delete']) {
+    test(`${kind} ${action} dispatches only after DB success; dispatch failure never rolls back content`, async () => {
+      for (const failure of [null, 'rebuild', 'rebuildThrows', action]) {
+        const h = await setup();
+        if (failure) h.failures[failure] = true;
+        if (action === 'insert') {
+          h.nodes[`${prefix}-title`].value = 'Saved title';
+          h.nodes[`${prefix}-article`].value = 'Saved body';
+          await h.nodes[formId].dispatch('submit');
+        } else if (action === 'update') {
+          h.context.openContentEditor(kind, id);
+          h.nodes['edit-title'].value = 'Saved title';
+          await h.nodes['content-edit-form'].dispatch('submit');
+        } else await h.context[kind === 'article' ? 'deleteVideo' : 'deleteTestimonial'](id);
+        const dispatches = h.calls.filter(c => c.action === 'rebuild');
+        if (failure === action) { assert.equal(dispatches.length, 0); continue; }
+        assert.equal(dispatches.length, 1); assert.equal(dispatches[0].name, 'rebuild-site');
+        assert(h.calls.findIndex(c => c.action === action) < h.calls.findIndex(c => c.action === 'rebuild'));
+        const message = h.nodes[messageId].textContent;
+        assert.match(message, /successfully/);
+        assert.match(message, failure ? /rebuild could not be started/ : /SEO pages are being refreshed/);
+        if (action === 'delete') assert(!h.rows[table].some(r => r.id === id));
+        else assert(h.rows[table].some(r => r.title === 'Saved title'));
+        assert(!h.calls.some(c => c.action === 'remove' && action !== 'delete'));
+      }
+    });
+  }
+}
+
+test('image-only edits and saved-with-cleanup-warning still request rebuilds', async () => {
+  for (const [kind, id, messageId] of [['article', 'article-1', 'admin-message'], ['testimonial', 'testimonial-1', 'testimonial-message']]) {
+    const h = await setup(); h.context.openContentEditor(kind, id);
+    await h.nodes['edit-remove-thumbnail'].click(); h.failures.remove = true;
+    await h.nodes['content-edit-form'].dispatch('submit');
+    assert.equal(h.calls.filter(c => c.action === 'rebuild').length, 1);
+    assert.match(h.nodes[messageId].textContent, /cleanup/i);
+    assert.match(h.nodes[messageId].textContent, /SEO pages are being refreshed/);
+  }
+});
+
+test('delayed rebuild feedback does not overwrite newer CMS feedback', async () => {
+  const h = await setup(); let complete;
+  h.context.db.functions.invoke = () => new Promise(resolve => { complete = resolve; });
+  h.nodes['admin-message'].textContent = 'Article saved.';
+  const request = h.context.requestSiteRebuild(h.nodes['admin-message']);
+  h.nodes['admin-message'].textContent = 'Publishing another article...';
+  complete({ data: { accepted: true } }); await request;
+  assert.equal(h.nodes['admin-message'].textContent, 'Publishing another article...');
+});
 
 for (const [kind, table, prefix, formId] of [
   ['article', 'education_videos', 'video', 'video-form'],

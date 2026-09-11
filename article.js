@@ -118,6 +118,7 @@ function updateArticleMetadata(article, text, images) {
   structured.id = "article-structured-data";
   structured.type = "application/ld+json";
   const data = { "@context": "https://schema.org", "@type": "Article", headline: title, description };
+  if (pageKind === "article") data.author = { "@type": "Person", name: "Jag Saini", jobTitle: "Broker of Record" };
   if (url) data.url = url;
   if (cover) data.image = [cover];
   if (article.created_at && !Number.isNaN(Date.parse(article.created_at))) data.datePublished = article.created_at;
