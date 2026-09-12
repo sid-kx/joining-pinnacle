@@ -207,6 +207,14 @@ test('static build generates clean directories, route manifest and sitemap witho
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(output, 'post-routes.json'))), ['/articles/my-title/', '/testimonials/why-i-joined/']);
     assert(!fs.existsSync(path.join(output, 'migrations'))); assert(!fs.existsSync(path.join(output, 'node_modules')));
     assert.match(fs.readFileSync(path.join(output, 'sitemap.xml'), 'utf8'), /testimonials\/why-i-joined/);
+    for (const file of ['privacy.html', 'terms.html']) {
+      assert(fs.existsSync(path.join(output, file)));
+      assert(fs.readFileSync(path.join(output, 'sitemap.xml'), 'utf8').includes(`https://join.pinnaclerealty.ca/${file}`));
+    }
+    for (const route of ['/articles/my-title/', '/testimonials/why-i-joined/']) {
+      const doc = new JSDOM(fs.readFileSync(path.join(output, route, 'index.html'), 'utf8'), { url: `https://join.pinnaclerealty.ca${route}` }).window.document;
+      for (const file of ['privacy.html', 'terms.html']) assert.equal(doc.querySelector(`.footer-links a[href="/${file}"]`).href, `https://join.pinnaclerealty.ca/${file}`);
+    }
   } finally { fs.rmSync(output, { recursive: true, force: true }); }
 });
 
@@ -218,6 +226,38 @@ test('all public templates use shared renderer assets and root-safe links', () =
   const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.match(index, /Content.url\("testimonial", item\)/); assert.doesNotMatch(index, /openTestimonial|testimonial-modal/);
   assert.match(fs.readFileSync(path.join(root, 'blog.html'), 'utf8'), /Content.url\("article", article\)/);
+});
+
+test('six public footers share the requested root-safe links; legal pages have static text and shared navigation', () => {
+  const expected = ['Home', 'Education', 'Schedule a Call', 'Privacy Policy', 'Terms of Service'];
+  for (const file of ['index.html', 'blog.html', 'article.html', 'testimonial.html', 'privacy.html', 'terms.html']) {
+    const source = fs.readFileSync(path.join(root, file), 'utf8');
+    const doc = new JSDOM(source).window.document;
+    const links = [...doc.querySelectorAll('.footer-links a')];
+    assert.deepEqual(links.map(a => a.textContent.trim()), expected);
+    assert.deepEqual(links.map(a => a.getAttribute('href')), ['/index.html', '/blog.html', 'https://calendly.com/jag-pinnaclerealty', '/privacy.html', '/terms.html']);
+    if (['privacy.html', 'terms.html'].includes(file)) {
+      assert(doc.querySelector('.site-header .menu-btn')); assert(doc.querySelector('.mobile-menu'));
+      assert.equal(doc.querySelector('.article-back').getAttribute('href'), '/index.html');
+      assert(doc.querySelectorAll('.legal-body h2').length >= 13);
+      assert.match(source, /legal counsel should review/);
+      assert(!doc.querySelector('script[src="supabase.js"]'));
+    }
+  }
+});
+
+test('dark root styling loads before remote styles on public, admin and login pages; mobile hero uses one card', () => {
+  for (const file of ['index.html', 'blog.html', 'article.html', 'testimonial.html', 'privacy.html', 'terms.html', 'admin.html', 'login.html']) {
+    const doc = new JSDOM(fs.readFileSync(path.join(root, file), 'utf8')).window.document;
+    assert.equal(doc.querySelector('meta[name="theme-color"]').content, '#0b0d0f');
+    assert.match(doc.querySelector('style').textContent, /html,body\{background:#0b0d0f\}/);
+  }
+  const home = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8')).window.document;
+  assert.equal(home.querySelectorAll('.hero-card').length, 1);
+  assert(home.querySelector('.hero-grid').firstElementChild.querySelector('h1'));
+  const css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  assert.match(css, /@media\(max-width:900px\)\{\s*\.hero-grid\{gap:36px\}[\s\S]*?\.hero-grid>\.hero-card\{order:-1/);
+  assert.doesNotMatch(css, /overscroll-behavior/);
 });
 
 (async () => {

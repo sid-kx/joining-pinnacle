@@ -52,7 +52,7 @@ async function build(fixtures, output = path.join(root, 'dist')) {
   const routes = pages.map(page => page.route);
   if (new Set(routes).size !== routes.length) throw new Error('Duplicate slugs in build data. Nothing was published.');
   fs.rmSync(output, { recursive: true, force: true }); fs.mkdirSync(output, { recursive: true });
-  const assets = ['index.html', 'blog.html', 'article.html', 'testimonial.html', 'article.js', 'admin.html', 'admin.js', 'login.html', 'script.js', 'style.css', 'rich-text.js', 'rich-text.css', 'content.js', 'supabase.js', 'CNAME', 'favicon.ico', 'favicon-32x32.png', 'apple-touch-icon.png', 'vendor'];
+  const assets = ['index.html', 'blog.html', 'privacy.html', 'terms.html', 'article.html', 'testimonial.html', 'article.js', 'admin.html', 'admin.js', 'login.html', 'script.js', 'style.css', 'rich-text.js', 'rich-text.css', 'content.js', 'supabase.js', 'CNAME', 'favicon.ico', 'favicon-32x32.png', 'apple-touch-icon.png', 'vendor'];
   assets.push(...fs.readdirSync(root).filter(file => /^google[a-z0-9]+\.html$/.test(file)));
   for (const file of assets) fs.cpSync(path.join(root, file), path.join(output, file), { recursive: true });
   for (const page of pages) {
@@ -61,7 +61,7 @@ async function build(fixtures, output = path.join(root, 'dist')) {
   }
   fs.writeFileSync(path.join(output, 'post-routes.json'), JSON.stringify(routes));
   fs.writeFileSync(path.join(output, '.nojekyll'), '');
-  fs.writeFileSync(path.join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['/', '/blog.html', ...routes].map(route => `<url><loc>https://join.pinnaclerealty.ca${route}</loc></url>`).join('')}</urlset>`);
+  fs.writeFileSync(path.join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['/', '/blog.html', '/privacy.html', '/terms.html', ...routes].map(route => `<url><loc>https://join.pinnaclerealty.ca${route}</loc></url>`).join('')}</urlset>`);
   return { pages: pages.length, output };
 }
 
