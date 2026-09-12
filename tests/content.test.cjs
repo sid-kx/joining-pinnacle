@@ -246,17 +246,24 @@ test('six public footers share the requested root-safe links; legal pages have s
   }
 });
 
-test('dark root styling loads before remote styles on public, admin and login pages; mobile hero uses one card', () => {
+test('dark root styling loads before remote styles; mobile hero uses one portrait Mux player', () => {
   for (const file of ['index.html', 'blog.html', 'article.html', 'testimonial.html', 'privacy.html', 'terms.html', 'admin.html', 'login.html']) {
     const doc = new JSDOM(fs.readFileSync(path.join(root, file), 'utf8')).window.document;
     assert.equal(doc.querySelector('meta[name="theme-color"]').content, '#0b0d0f');
     assert.match(doc.querySelector('style').textContent, /html,body\{background:#0b0d0f\}/);
   }
   const home = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8')).window.document;
-  assert.equal(home.querySelectorAll('.hero-card').length, 1);
+  assert.equal(home.querySelectorAll('.hero-vsl iframe').length, 1);
+  assert.equal(home.querySelectorAll('.hero-card,.hero-art,.card-kicker,.hero-card-footer').length, 0);
+  const player = home.querySelector('.hero-vsl iframe');
+  assert.equal(player.getAttribute('src'), 'https://player.mux.com/501w3LJSd3w01HIHD016qPcf1F778M56y9clgD00SAexvNU');
+  assert.equal(player.title, 'Pinnacle Realty Video');
+  assert(player.hasAttribute('allowfullscreen'));
+  assert(!player.hasAttribute('autoplay'));
   assert(home.querySelector('.hero-grid').firstElementChild.querySelector('h1'));
   const css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
-  assert.match(css, /@media\(max-width:900px\)\{\s*\.hero-grid\{gap:36px\}[\s\S]*?\.hero-grid>\.hero-card\{order:-1/);
+  assert.match(css, /@media\(max-width:900px\)\{\s*\.hero-grid\{gap:36px\}[\s\S]*?\.hero-grid>\.hero-vsl-wrap\{order:-1/);
+  assert.match(css, /\.hero-vsl\{width:min\(100%,360px\);aspect-ratio:9 \/ 16/);
   assert.doesNotMatch(css, /overscroll-behavior/);
 });
 

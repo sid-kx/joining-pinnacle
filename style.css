@@ -189,16 +189,13 @@ a,button,input,select,textarea{-webkit-tap-highlight-color:transparent}
 .footer-links{min-width:0}
 .footer-links a{overflow-wrap:anywhere}
 .footer-links a:hover{color:var(--gold2)}
+.hero-vsl-wrap{display:flex;justify-content:center;align-items:center;width:100%;min-width:0}
+.hero-vsl{width:min(100%,360px);aspect-ratio:9 / 16;border-radius:24px;overflow:hidden;background:#000;box-shadow:0 0 0 1px var(--line-dark)}
+.hero-vsl iframe{width:100%;height:100%;border:0;display:block}
 @media(max-width:900px){
   .hero-grid{gap:36px}
   .hero-grid>*{min-width:0}
-  .hero-grid>.hero-card{order:-1;width:100%;margin-top:0}
-  .hero-card .hero-art{width:100%;height:auto;aspect-ratio:1.15;max-height:320px}
-  .hero-card-footer{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
-  .hero-card-footer div{padding:10px 6px;min-width:0}
-  .hero-card-footer p{overflow-wrap:anywhere}
-  .hero-card .orbit-one{width:80%;max-width:250px;height:auto;aspect-ratio:1}
-  .hero-card .orbit-two{width:132%;max-width:410px;height:auto;aspect-ratio:1}
+  .hero-grid>.hero-vsl-wrap{order:-1}
   .legal-main{padding-top:116px}
 }
 @media(max-width:600px){
