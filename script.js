@@ -2,6 +2,53 @@ const menuBtn = document.querySelector(".menu-btn");
 const mobileMenu = document.querySelector(".mobile-menu");
 const header = document.querySelector(".site-header");
 
+const heroPlayer = document.getElementById("hero-vsl-player");
+const heroStart = document.querySelector(".hero-vsl-start");
+
+if (heroPlayer && heroStart) {
+  const frame = heroPlayer.closest(".hero-vsl");
+  const status = document.getElementById("hero-vsl-status");
+  let started = false;
+  let starting = false;
+
+  function finishHeroStart() {
+    if (started) return;
+    started = true;
+    frame.classList.remove("is-unstarted");
+    heroPlayer.removeAttribute("inert");
+    if (document.activeElement === heroStart) heroPlayer.focus({ preventScroll: true });
+    heroStart.hidden = true;
+    status.textContent = "";
+  }
+
+  async function startHeroVideo() {
+    if (started || starting) return;
+    // Keep play() in the user gesture; an unloaded component requires a fresh tap.
+    if (typeof heroPlayer.play !== "function") {
+      status.textContent = "Video is still loading. Please try again in a moment.";
+      return;
+    }
+    starting = true;
+    heroStart.disabled = true;
+    status.textContent = "";
+    try {
+      heroPlayer.muted = false;
+      heroPlayer.volume = 1;
+      await heroPlayer.play();
+      finishHeroStart();
+    } catch (error) {
+      if (!started) status.textContent = "Unable to start the video. Please try again.";
+      console.error("Unable to start hero video:", error);
+    } finally {
+      starting = false;
+      heroStart.disabled = false;
+    }
+  }
+
+  heroPlayer.addEventListener("playing", finishHeroStart, { once: true });
+  heroStart.addEventListener("click", startHeroVideo);
+}
+
 if (menuBtn && mobileMenu) {
   menuBtn.setAttribute("aria-expanded", "false");
 

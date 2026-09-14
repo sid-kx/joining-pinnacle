@@ -15,6 +15,7 @@
   >
 
   <title>Join Pinnacle Realty | Built for Ambitious Agents</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player" defer></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -228,13 +229,21 @@
 
         <!-- HERO VIDEO -->
         <aside class="hero-vsl-wrap reveal delay-1">
-          <div class="hero-vsl">
-            <iframe
-              src="https://player.mux.com/501w3LJSd3w01HIHD016qPcf1F778M56y9clgD00SAexvNU"
-              title="Pinnacle Realty Video"
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-              allowfullscreen
-            ></iframe>
+          <div class="hero-vsl is-unstarted">
+            <mux-player
+              id="hero-vsl-player"
+              playback-id="501w3LJSd3w01HIHD016qPcf1F778M56y9clgD00SAexvNU"
+              aria-label="Pinnacle Realty Video"
+              playsinline
+              preload="metadata"
+              tabindex="0"
+              inert
+            ></mux-player>
+            <button class="hero-vsl-start" type="button" aria-label="Play Pinnacle Realty video with sound" aria-describedby="hero-vsl-status">
+              <span class="desktop-label">Click to play with sound</span>
+              <span class="mobile-label">Tap to play with sound</span>
+            </button>
+            <p id="hero-vsl-status" class="hero-vsl-status" role="status"></p>
           </div>
         </aside>
 
