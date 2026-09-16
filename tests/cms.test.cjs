@@ -134,6 +134,99 @@ const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
 const writes = calls => calls.filter(call => ['insert', 'update', 'delete', 'upload', 'remove'].includes(call.action));
 
+test('shared YouTube parser accepts Shorts and legacy URLs with strict hosts, paths and IDs', async () => {
+  const { context } = await setup();
+  const valid = [
+    'https://youtube.com/shorts/abcdefghijk',
+    'https://www.youtube.com/shorts/abcdefghijk',
+    'https://m.youtube.com/shorts/abcdefghijk',
+    'https://www.youtube.com/shorts/abcdefghijk?si=test',
+    'https://www.youtube.com/shorts/abcdefghijk/',
+    'https://www.youtube.com/shorts/abcdefghijk/?si=test',
+    'https://youtu.be/abcdefghijk',
+    'https://www.youtu.be/abcdefghijk/?si=test',
+    'https://www.youtube.com/watch?v=abcdefghijk&t=3',
+    'https://youtube.com/watch?v=abcdefghijk',
+    'https://m.youtube.com/watch?v=abcdefghijk',
+    'https://www.youtube.com/embed/abcdefghijk',
+    'https://www.youtube.com/embed/abcdefghijk/?start=3',
+    'https://youtube-nocookie.com/embed/abcdefghijk',
+    'https://www.youtube-nocookie.com/embed/abcdefghijk/?rel=0'
+  ];
+  for (const url of valid) {
+    assert.equal(context.extractYoutubeId(url), 'abcdefghijk', url);
+    assert(context.isSupportedVideoYoutubeUrl(url, 'abcdefghijk'), url);
+    assert(!context.isSupportedVideoYoutubeUrl(url, 'differentID'), url);
+  }
+  assert.equal(context.extractYoutubeId('https://youtube.com/shorts/aB0_9-zYx12'), 'aB0_9-zYx12');
+  for (const url of [
+    '', null, 'not a URL',
+    'https://youtube.com/shorts/',
+    'https://youtube.com/shorts/abc',
+    'https://youtube.com/shorts/abcdefghijkl',
+    'https://youtube.com/shorts/abcdefghij!',
+    'https://youtube.com/shorts/abcdefghijk/extra',
+    'https://youtube.com/shorts/abcdefghijk//',
+    'https://example.com/shorts/abcdefghijk',
+    'https://youtube.com/random/abcdefghijk',
+    'https://youtube.com/random/abcdefghijk?v=abcdefghijk',
+    'https://youtube.com.evil.com/shorts/abcdefghijk',
+    'https://evil-youtu.be/abcdefghijk',
+    'https://youtu.be/abcdefghijk/extra',
+    'https://youtube-nocookie.com/shorts/abcdefghijk',
+    'https://user:password@youtube.com/shorts/abcdefghijk',
+    'ftp://youtube.com/shorts/abcdefghijk'
+  ]) {
+    assert.equal(context.extractYoutubeId(url), '', String(url));
+    assert(!context.isSupportedVideoYoutubeUrl(url, 'abcdefghijk'), String(url));
+    assert(!context.isSupportedVideoYoutubeUrl(url, ''), String(url));
+  }
+});
+
+for (const [kind, table, prefix, formId, youtubeField] of [
+  ['article', 'education_videos', 'video', 'video-form', 'youtube-url'],
+  ['testimonial', 'agent_testimonials', 'testimonial', 'testimonial-form', 'testimonial-youtube-url']
+]) {
+  for (const [format, url] of [
+    ['Shorts', 'https://www.youtube.com/shorts/abcdefghijk/?si=ABC'],
+    ['normal video', 'https://www.youtube.com/watch?v=abcdefghijk&si=ABC']
+  ]) {
+    test(`${kind} publishes and edits a ${format}, preserving URL and extracted ID`, async () => {
+      const h = await setup();
+      h.nodes[`${prefix}-title`].value = 'YouTube test';
+      h.nodes[`${prefix}-article`].value = 'Body text';
+      h.nodes[youtubeField].value = url;
+      await h.nodes[formId].dispatch('submit');
+      const insert = h.calls.find(c => c.action === 'insert');
+      assert.equal(insert.table, table);
+      assert.equal(insert.payload.youtube_url, url);
+      assert.equal(insert.payload.youtube_id, 'abcdefghijk');
+      h.context.openContentEditor(kind, 'new-post');
+      const editedUrl = url.replace('abcdefghijk', 'aB0_9-zYx12');
+      h.nodes['edit-youtube-url'].value = editedUrl;
+      await h.nodes['content-edit-form'].dispatch('submit');
+      const update = h.calls.find(c => c.action === 'update');
+      assert.equal(update.table, table);
+      assert.equal(update.payload.youtube_url, editedUrl);
+      assert.equal(update.payload.youtube_id, 'aB0_9-zYx12');
+    });
+  }
+  test(`${kind} rejects malformed Shorts before publishing or editing`, async () => {
+    for (const url of ['https://youtube.com/shorts/', 'https://youtube.com/shorts/abc', 'https://youtube.com/shorts/abcdefghijk/extra', 'https://example.com/shorts/abcdefghijk', 'https://youtube.com/random/abcdefghijk']) {
+      const h = await setup();
+      h.nodes[`${prefix}-title`].value = 'Invalid URL';
+      h.nodes[`${prefix}-article`].value = 'Body text';
+      h.nodes[youtubeField].value = url;
+      await h.nodes[formId].dispatch('submit');
+      h.context.openContentEditor(kind, `${kind}-1`);
+      h.nodes['edit-youtube-url'].value = url;
+      await h.nodes['content-edit-form'].dispatch('submit');
+      assert.equal(writes(h.calls).length, 0);
+      assert.match(h.nodes['edit-message'].textContent, /Shorts/);
+    }
+  });
+}
+
 for (const [kind, table, prefix, formId, id, messageId] of [
   ['article', 'education_videos', 'video', 'video-form', 'article-1', 'admin-message'],
   ['testimonial', 'agent_testimonials', 'testimonial', 'testimonial-form', 'testimonial-1', 'testimonial-message']

@@ -223,7 +223,7 @@ async function handleVideoSubmit(event) {
 
   if (draft.youtube_url && !isSupportedVideoYoutubeUrl(draft.youtube_url, draft.youtube_id)) {
     messageBox.textContent =
-      "Enter a valid YouTube watch, youtu.be or embed link, or leave the YouTube field blank.";
+      "Enter a valid YouTube watch, Shorts, youtu.be or embed link, or leave the YouTube field blank.";
     return;
   }
 
@@ -286,26 +286,8 @@ async function handleVideoSubmit(event) {
 }
 
 function isSupportedVideoYoutubeUrl(value, youtubeId) {
-  if (!/^[A-Za-z0-9_-]{11}$/.test(youtubeId || "")) {
-    return false;
-  }
-  try {
-    const url = new URL(value);
-    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) {
-      return false;
-    }
-    if (["youtu.be", "www.youtu.be"].includes(url.hostname)) {
-      return url.pathname === `/${youtubeId}`;
-    }
-    if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname)) {
-      return (url.pathname === "/watch" && url.searchParams.get("v") === youtubeId) ||
-        url.pathname === `/embed/${youtubeId}`;
-    }
-    return ["youtube-nocookie.com", "www.youtube-nocookie.com"].includes(url.hostname) &&
-      url.pathname === `/embed/${youtubeId}`;
-  } catch {
-    return false;
-  }
+  const extractedId = extractYoutubeId(value);
+  return Boolean(extractedId) && extractedId === youtubeId;
 }
 
 function getVideoImagePath(value) {
@@ -400,7 +382,7 @@ async function handleTestimonialSubmit(event) {
     return;
   }
   if (youtubeUrl && !isSupportedVideoYoutubeUrl(youtubeUrl, youtubeId)) {
-    testimonialMessage.textContent = "Enter a supported YouTube link, or leave it blank.";
+    testimonialMessage.textContent = "Enter a valid YouTube watch, Shorts, youtu.be or embed link, or leave the YouTube field blank.";
     return;
   }
 
@@ -1009,7 +991,7 @@ async function saveContentEdits(event) {
     return;
   }
   if (youtubeUrl && !isSupportedVideoYoutubeUrl(youtubeUrl, draft.youtube_id)) {
-    editMessage.textContent = "Enter a supported YouTube link, or leave it blank.";
+    editMessage.textContent = "Enter a valid YouTube watch, Shorts, youtu.be or embed link, or leave the YouTube field blank.";
     return;
   }
   if (state.kind === "testimonial" && !RichText.text(draft.article)) {
@@ -1055,25 +1037,28 @@ async function saveContentEdits(event) {
 }
 
 function extractYoutubeId(url) {
-  if (!url) {
+  if (typeof url !== "string" || !url.trim()) {
     return "";
   }
 
   try {
     const parsed = new URL(url);
-
-    if (parsed.hostname.includes("youtu.be")) {
-      return parsed.pathname.slice(1);
+    if (!["https:", "http:"].includes(parsed.protocol) || parsed.username || parsed.password) {
+      return "";
     }
-
-    if (parsed.searchParams.get("v")) {
-      return parsed.searchParams.get("v");
+    // Normalize one optional trailing slash without discarding extra path segments.
+    const pathname = parsed.pathname.replace(/\/$/, "");
+    let id = "";
+    if (["youtu.be", "www.youtu.be"].includes(parsed.hostname)) {
+      id = pathname.slice(1);
+    } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(parsed.hostname)) {
+      id = pathname === "/watch"
+        ? parsed.searchParams.get("v") || ""
+        : pathname.match(/^\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})$/)?.[1] || "";
+    } else if (["youtube-nocookie.com", "www.youtube-nocookie.com"].includes(parsed.hostname)) {
+      id = pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})$/)?.[1] || "";
     }
-
-    const embedMatch =
-      parsed.pathname.match(/\/embed\/([^/]+)/);
-
-    return embedMatch ? embedMatch[1] : "";
+    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : "";
   } catch {
     return "";
   }

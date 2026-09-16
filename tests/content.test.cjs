@@ -126,6 +126,36 @@ test('legacy text remains escaped and excerpts/meta descriptions never include H
 
 const post = { id: '9', slug: 'my-title', title: 'My Title', article: '<!--pinnacle-rich-text:v1-->' + formatted, youtube_id: 'abcdefghijk', youtube_url: null, image_urls: ['https://example.com/gallery.jpg', 'https://example.com/second.jpg'], thumbnail_url: 'https://example.com/cover.jpg', created_at: '2026-09-11T00:00:00Z' };
 
+test('article and testimonial Shorts render standard embeds in static HTML and browser rendering', () => {
+  for (const kind of ['article', 'testimonial']) {
+    for (const url of [
+      'https://youtube.com/shorts/abcdefghijk',
+      'https://www.youtube.com/shorts/abcdefghijk',
+      'https://m.youtube.com/shorts/abcdefghijk',
+      'https://www.youtube.com/shorts/abcdefghijk?si=test',
+      'https://www.youtube.com/shorts/abcdefghijk/',
+      'https://www.youtube.com/shorts/abcdefghijk/?si=test',
+      'https://www.youtube.com/watch?v=abcdefghijk',
+      'https://youtu.be/abcdefghijk',
+      'https://www.youtube.com/embed/abcdefghijk',
+      'https://www.youtube-nocookie.com/embed/abcdefghijk'
+    ]) {
+      for (const id of ['abcdefghijk', null]) {
+        const item = { ...post, youtube_id: id, youtube_url: url };
+        const dom = new JSDOM(renderPage(kind, item).html, { runScripts: 'outside-only' });
+        const w = dom.window;
+        windows.push(w);
+        const check = () => assert.equal(w.document.querySelector('#article-media iframe').getAttribute('src'), 'https://www.youtube.com/embed/abcdefghijk?rel=0');
+        check();
+        w.DOMPurify = require('dompurify')(w);
+        w.__BUILD_POST__ = item;
+        for (const file of ['rich-text.js', 'content.js', 'article.js']) w.eval(fs.readFileSync(path.join(root, file), 'utf8'));
+        check();
+      }
+    }
+  }
+});
+
 test('static article and testimonial HTML contains unique metadata and full sanitized content without JS', () => {
   for (const kind of ['article', 'testimonial']) {
     const page = renderPage(kind, post), doc = new JSDOM(page.html).window.document;
