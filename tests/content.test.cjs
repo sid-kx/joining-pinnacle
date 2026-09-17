@@ -6,6 +6,35 @@ const vm = require('node:vm');
 const { JSDOM } = require('jsdom');
 const { build, renderPage } = require('../scripts/build-pages.cjs');
 const root = path.resolve(__dirname, '..');
+const schedulingUrl = 'https://growwithpinnaclerealty.com/landingpage';
+const retiredSchedulingUrl = ['https://calendly.com', 'jag-pinnaclerealty'].join('/');
+
+function verifySchedulingLinks(source) {
+  assert(!source.includes(retiredSchedulingUrl));
+  const dom = new JSDOM(source);
+  const links = [...dom.window.document.querySelectorAll('a')].filter(a =>
+    a.textContent.includes('Schedule a Call') || a.getAttribute('href') === schedulingUrl);
+  for (const link of links) {
+    assert.equal(link.getAttribute('href'), schedulingUrl);
+    assert.equal(link.target, '_blank');
+    assert.equal(link.getAttribute('rel'), 'noopener noreferrer');
+  }
+  dom.window.close();
+  return links.length;
+}
+
+function verifySchedulingTree(directory, sourceTree = false) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isSymbolicLink() || ['.git', 'node_modules'].includes(entry.name) || (sourceTree && entry.name === 'dist')) continue;
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) verifySchedulingTree(file, sourceTree);
+    else {
+      const source = fs.readFileSync(file, 'utf8');
+      assert(!source.includes(retiredSchedulingUrl), `Retired scheduling URL in ${file}`);
+      if (file.endsWith('.html')) verifySchedulingLinks(source);
+    }
+  }
+}
 const windows = [];
 function setup(editor = false) {
   const w = new JSDOM('<form><textarea id="body" data-rich-text></textarea></form>', { runScripts: 'outside-only', url: 'https://join.pinnaclerealty.ca/' }).window;
@@ -232,6 +261,7 @@ test('static build generates clean directories, route manifest and sitemap witho
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'pinnacle-build-test-'));
   try {
     await build({ education_videos: [post], agent_testimonials: [{ ...post, slug: 'why-i-joined' }] }, output);
+    verifySchedulingTree(output);
     assert(fs.existsSync(path.join(output, 'articles/my-title/index.html')));
     assert(fs.existsSync(path.join(output, 'testimonials/why-i-joined/index.html')));
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(output, 'post-routes.json'))), ['/articles/my-title/', '/testimonials/why-i-joined/']);
@@ -242,7 +272,9 @@ test('static build generates clean directories, route manifest and sitemap witho
       assert(fs.readFileSync(path.join(output, 'sitemap.xml'), 'utf8').includes(`https://join.pinnaclerealty.ca/${file}`));
     }
     for (const route of ['/articles/my-title/', '/testimonials/why-i-joined/']) {
-      const doc = new JSDOM(fs.readFileSync(path.join(output, route, 'index.html'), 'utf8'), { url: `https://join.pinnaclerealty.ca${route}` }).window.document;
+      const source = fs.readFileSync(path.join(output, route, 'index.html'), 'utf8');
+      assert(verifySchedulingLinks(source) >= 3);
+      const doc = new JSDOM(source, { url: `https://join.pinnaclerealty.ca${route}` }).window.document;
       for (const file of ['privacy.html', 'terms.html']) assert.equal(doc.querySelector(`.footer-links a[href="/${file}"]`).href, `https://join.pinnaclerealty.ca/${file}`);
     }
   } finally { fs.rmSync(output, { recursive: true, force: true }); }
@@ -265,7 +297,7 @@ test('six public footers share the requested root-safe links; legal pages have s
     const doc = new JSDOM(source).window.document;
     const links = [...doc.querySelectorAll('.footer-links a')];
     assert.deepEqual(links.map(a => a.textContent.trim()), expected);
-    assert.deepEqual(links.map(a => a.getAttribute('href')), ['/index.html', '/blog.html', 'https://calendly.com/jag-pinnaclerealty', '/privacy.html', '/terms.html']);
+    assert.deepEqual(links.map(a => a.getAttribute('href')), ['/index.html', '/blog.html', 'https://growwithpinnaclerealty.com/landingpage', '/privacy.html', '/terms.html']);
     if (['privacy.html', 'terms.html'].includes(file)) {
       assert(doc.querySelector('.site-header .menu-btn')); assert(doc.querySelector('.mobile-menu'));
       assert.equal(doc.querySelector('.article-back').getAttribute('href'), '/index.html');
@@ -273,6 +305,13 @@ test('six public footers share the requested root-safe links; legal pages have s
       assert.match(source, /legal counsel should review/);
       assert(!doc.querySelector('script[src="supabase.js"]'));
     }
+  }
+});
+
+test('scheduling destinations are replaced throughout source files and public links open safely in new tabs', () => {
+  verifySchedulingTree(root, true);
+  for (const file of ['index.html', 'blog.html', 'article.html', 'testimonial.html', 'privacy.html', 'terms.html']) {
+    assert(verifySchedulingLinks(fs.readFileSync(path.join(root, file), 'utf8')) >= 3);
   }
 });
 
