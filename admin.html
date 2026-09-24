@@ -229,6 +229,13 @@
         width:100%;
       }
     }
+    .admin-testimonial img,.admin-testimonial-thumb{aspect-ratio:9/16;object-fit:contain}
+    .admin-testimonial p{overflow-wrap:anywhere}
+    @media(max-width:700px){
+      .admin-testimonial{grid-template-columns:90px minmax(0,1fr);gap:14px}
+      .admin-testimonial img,.admin-testimonial-thumb{width:90px;grid-row:span 2}
+      .admin-testimonial .admin-actions{grid-column:2}
+    }
   </style>
 </head>
 
@@ -320,62 +327,12 @@
     <section class="add-panel">
 
       <h2>Add a Testimonial</h2>
-
-      <p>
-        Add a title, article, optional YouTube link and up to 10 images.
-      </p>
-
-      <form
-        id="testimonial-form"
-        class="content-form"
-      >
-
+      <form id="testimonial-form" class="content-form">
         <div class="admin-field">
-          <label for="testimonial-title">Title</label>
-          <input
-            id="testimonial-title"
-            type="text"
-            required
-          >
+          <label for="testimonial-youtube-url">YouTube Video / YouTube Shorts URL</label>
+          <input id="testimonial-youtube-url" type="url" required placeholder="https://www.youtube.com/shorts/...">
         </div>
-
-        <div class="admin-field">
-          <label for="testimonial-article">Article</label>
-          <textarea data-rich-text
-            id="testimonial-article"
-            required
-          ></textarea>
-        </div>
-
-        <div class="admin-field">
-          <label for="testimonial-youtube-url">YouTube link</label>
-          <input
-            id="testimonial-youtube-url"
-            type="url"
-            placeholder="https://www.youtube.com/watch?v=..."
-          >
-        </div>
-
-        <div class="admin-field">
-          <label for="testimonial-thumbnail">Thumbnail</label>
-          <input id="testimonial-thumbnail" type="file" accept="image/*" aria-describedby="testimonial-thumbnail-note">
-          <small id="testimonial-thumbnail-note">Optional. Used as the testimonial card thumbnail.</small>
-        </div>
-
-        <div class="admin-field">
-          <label for="testimonial-images">Images (up to 10)</label>
-          <input
-            id="testimonial-images"
-            type="file"
-            accept="image/*"
-            multiple
-          >
-        </div>
-
-        <button type="submit">
-          Add Testimonial
-        </button>
-
+        <button type="submit">Publish Testimonial</button>
       </form>
 
       <div id="testimonial-message" role="status" aria-live="polite"></div>
@@ -407,6 +364,21 @@
     </section>
 
   </main>
+
+  <dialog id="testimonial-editor" class="content-editor" aria-labelledby="testimonial-edit-heading">
+    <h2 id="testimonial-edit-heading">Edit Testimonial</h2>
+    <form id="testimonial-edit-form" class="content-form">
+      <div class="admin-field">
+        <label for="testimonial-edit-url">YouTube Video / YouTube Shorts URL</label>
+        <input id="testimonial-edit-url" type="url" required>
+      </div>
+      <p id="testimonial-edit-message" role="status"></p>
+      <div class="edit-actions">
+        <button id="testimonial-edit-cancel" type="button">Cancel</button>
+        <button type="submit">Save Changes</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="content-editor" class="content-editor" aria-labelledby="edit-heading">
     <h2 id="edit-heading">Edit Post</h2>
@@ -459,6 +431,7 @@
   <script src="vendor/quill.js"></script>
   <script src="rich-text.js"></script>
   <script src="content.js"></script>
+  <script src="youtube.js"></script>
   <script src="admin.js"></script>
 
 </body>

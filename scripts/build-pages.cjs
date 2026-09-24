@@ -6,7 +6,8 @@ const root = path.resolve(__dirname, '..');
 const fields = 'id,slug,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at';
 
 function renderPage(kind, post) {
-  const filename = kind === 'testimonial' ? 'testimonial.html' : 'article.html';
+  if (kind !== 'article') throw new Error('Only articles have static pages.');
+  const filename = 'article.html';
   const dom = new JSDOM(fs.readFileSync(path.join(root, filename), 'utf8'), { runScripts: 'outside-only', url: 'https://join.pinnaclerealty.ca/' });
   const window = dom.window;
   window.DOMPurify = createDOMPurify(window);
@@ -44,15 +45,15 @@ async function readPosts(table) {
 }
 
 async function build(fixtures, output = path.join(root, 'dist')) {
-  const data = fixtures || { education_videos: await readPosts('education_videos'), agent_testimonials: await readPosts('agent_testimonials') };
+  const data = fixtures || { education_videos: await readPosts('education_videos') };
   const pages = [];
-  for (const [table, kind] of [['education_videos', 'article'], ['agent_testimonials', 'testimonial']]) {
+  for (const [table, kind] of [['education_videos', 'article']]) {
     for (const post of data[table]) pages.push(renderPage(kind, post));
   }
   const routes = pages.map(page => page.route);
   if (new Set(routes).size !== routes.length) throw new Error('Duplicate slugs in build data. Nothing was published.');
   fs.rmSync(output, { recursive: true, force: true }); fs.mkdirSync(output, { recursive: true });
-  const assets = ['index.html', 'blog.html', 'privacy.html', 'terms.html', 'article.html', 'testimonial.html', 'article.js', 'admin.html', 'admin.js', 'login.html', 'script.js', 'style.css', 'rich-text.js', 'rich-text.css', 'content.js', 'supabase.js', 'CNAME', 'favicon.ico', 'favicon-32x32.png', 'apple-touch-icon.png', 'vendor'];
+  const assets = ['index.html', 'blog.html', 'privacy.html', 'terms.html', 'article.html', 'article.js', 'youtube.js', 'testimonials.js', 'admin.html', 'admin.js', 'login.html', 'script.js', 'style.css', 'rich-text.js', 'rich-text.css', 'content.js', 'supabase.js', 'CNAME', 'favicon.ico', 'favicon-32x32.png', 'apple-touch-icon.png', 'vendor'];
   assets.push(...fs.readdirSync(root).filter(file => /^google[a-z0-9]+\.html$/.test(file)));
   for (const file of assets) fs.cpSync(path.join(root, file), path.join(output, file), { recursive: true });
   for (const page of pages) {

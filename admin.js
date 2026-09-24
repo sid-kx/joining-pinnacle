@@ -8,15 +8,10 @@ const messageBox = document.getElementById("admin-message");
 const list = document.getElementById("admin-video-list");
 const logoutButton = document.getElementById("logout");
 const testimonialForm = document.getElementById("testimonial-form");
-const testimonialTitle = document.getElementById("testimonial-title");
-const testimonialArticle = document.getElementById("testimonial-article");
 const testimonialYoutubeUrl = document.getElementById("testimonial-youtube-url");
-const testimonialImages = document.getElementById("testimonial-images");
-const testimonialThumbnail = document.getElementById("testimonial-thumbnail");
 const testimonialMessage = document.getElementById("testimonial-message");
 const testimonialList = document.getElementById("admin-testimonial-list");
 
-const TESTIMONIAL_IMAGE_BUCKET = "testimonial-images";
 const VIDEO_IMAGE_BUCKET = "video-images";
 const publishedVideos = new Map();
 const publishedTestimonials = new Map();
@@ -68,7 +63,7 @@ async function initializeAdmin() {
 
   await Promise.all([
     loadVideos(),
-    loadTestimonials()
+    loadTestimonials().catch(error => console.error("Testimonial list load failed:", error))
   ]);
 }
 
@@ -369,69 +364,30 @@ if (testimonialForm) {
 async function handleTestimonialSubmit(event) {
   event.preventDefault();
   if (testimonialPublishing) return;
-
-  const title = testimonialTitle.value.trim();
-  const article = RichText.read(testimonialArticle);
   const youtubeUrl = testimonialYoutubeUrl.value.trim();
   const youtubeId = extractYoutubeId(youtubeUrl);
-  const files = Array.from(testimonialImages.files || []);
-  const thumbnails = Array.from(testimonialThumbnail.files || []);
-  const fileError = validateContentImages(files, thumbnails);
-  if (!title || !RichText.text(article) || fileError) {
-    testimonialMessage.textContent = fileError || "Add a title and article first.";
+  if (!isSupportedVideoYoutubeUrl(youtubeUrl, youtubeId)) {
+    testimonialMessage.textContent = "Enter a valid YouTube or YouTube Shorts URL.";
     return;
   }
-  if (youtubeUrl && !isSupportedVideoYoutubeUrl(youtubeUrl, youtubeId)) {
-    testimonialMessage.textContent = "Enter a valid YouTube watch, Shorts, youtu.be or embed link, or leave the YouTube field blank.";
-    return;
-  }
-
-  const submitButton = testimonialForm.querySelector('button[type="submit"]');
+  const button = testimonialForm.querySelector('button[type="submit"]');
   testimonialPublishing = true;
-  submitButton.disabled = true;
+  button.disabled = true;
   testimonialMessage.textContent = "Publishing testimonial...";
-  const uploaded = [];
-  let publishedId;
   try {
-    const imageUrls = await uploadTestimonialImages(files);
-    uploaded.push(...imageUrls);
-    const thumbnailUrls = await uploadTestimonialImages(thumbnails);
-    uploaded.push(...thumbnailUrls);
-    const { data, error } = await Content.write(db, "agent_testimonials", {
-        title, article,
-        youtube_url: youtubeUrl || null,
-        youtube_id: youtubeId || null,
-        image_urls: imageUrls,
-        thumbnail_url: thumbnailUrls[0] || null
-      });
-    if (error || !data?.id) {
-      throw new Error(`Database insert failed: ${error?.message || "No testimonial ID was returned."}`);
-    }
-    publishedId = data.id;
+    const { data, error } = await db.from("agent_testimonials")
+      .insert({ youtube_url: youtubeUrl, youtube_id: youtubeId }).select("id").single();
+    if (error || !data?.id) throw error || new Error("No testimonial ID was returned.");
+    testimonialMessage.textContent = "Testimonial published successfully.";
+    testimonialForm.reset();
   } catch (error) {
-    let message = error?.message || "Unable to publish the testimonial.";
-    try {
-      await removeTestimonialImages(uploaded);
-    } catch (cleanupError) {
-      message += ` New-image rollback also failed: ${cleanupError.message}. Manual Storage cleanup may be needed.`;
-    }
-    testimonialMessage.textContent = `Testimonial was not published. ${message}`;
-    console.error("Testimonial publishing failed:", error);
+    testimonialMessage.textContent = `Unable to publish testimonial: ${error.message}. Check the video-only schema and admin permissions.`;
     return;
   } finally {
     testimonialPublishing = false;
-    submitButton.disabled = false;
+    button.disabled = false;
   }
-  testimonialMessage.textContent = `Testimonial published successfully. Database ID: ${publishedId}`;
-  testimonialForm.reset();
-  const rebuild = requestSiteRebuild(testimonialMessage);
-  try {
-    await loadTestimonials();
-  } catch (error) {
-    testimonialMessage.textContent += " Reload the page to refresh the published list.";
-    console.error("Testimonial list refresh failed:", error);
-  }
-  await rebuild;
+  try { await loadTestimonials(); } catch { testimonialMessage.textContent += " Reload to refresh the list."; }
 }
 
 async function deleteVideo(id) {
@@ -490,255 +446,102 @@ async function deleteVideo(id) {
 }
 
 async function loadTestimonials() {
-  publishedTestimonials.clear();
-  if (!testimonialList) {
-    return;
-  }
-
-  testimonialList.innerHTML = `
-    <div class="empty-state">
-      Loading testimonials...
-    </div>
-  `;
-
-  const {
-    data: testimonials,
-    error
-  } = await Content.select(db, "agent_testimonials", "id,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at", query => query.order("created_at", { ascending: false }));
-
+  if (!testimonialList) return;
+  testimonialList.innerHTML = '<div class="empty-state">Loading testimonials...</div>';
+  const { data, error } = await db.from("agent_testimonials")
+    .select("id,youtube_url,youtube_id,created_at").order("created_at", { ascending: false });
   if (error) {
-    console.error("Testimonial load error:", error);
-
-    testimonialList.innerHTML = `
-      <div class="empty-state">
-        Unable to load testimonials: ${escapeHtml(error.message)}
-      </div>
-    `;
-
-    return;
-  }
-
-  if (!testimonials || testimonials.length === 0) {
-    testimonialList.innerHTML = `
-      <div class="empty-state">
-        No testimonials have been published yet.
-      </div>
-    `;
-
-    return;
-  }
-
-  testimonialList.innerHTML = testimonials.map(testimonial => {
-    publishedTestimonials.set(String(testimonial.id), testimonial);
-    const thumb = getTestimonialCover(testimonial);
-
-    return `
-      <article class="admin-testimonial">
-
-        ${
-          thumb
-            ? `
-              <img
-                src="${escapeHtml(thumb)}"
-                alt="${escapeHtml(testimonial.title)}"
-                loading="lazy"
-                decoding="async"
-              >
-            `
-            : `
-              <div class="admin-testimonial-thumb">
-                P
-              </div>
-            `
-        }
-
-        <div>
-          <h3>
-            ${escapeHtml(testimonial.title)}
-          </h3>
-
-          <p>
-            ${escapeHtml(trimWords(testimonial.article, 22))}
-          </p>
-        </div>
-
-        <div class="admin-actions">
-        <button class="edit-post" data-kind="testimonial" data-id="${escapeHtml(testimonial.id)}" type="button">Edit</button>
-        <button
-          class="delete-testimonial"
-          data-id="${testimonial.id}"
-          type="button"
-        >
-          Delete
-        </button>
-        </div>
-
-      </article>
-    `;
-  }).join("");
-
-  attachEditButtons(testimonialList);
-
-  document
-    .querySelectorAll(".delete-testimonial")
-    .forEach(button => {
-      button.addEventListener("click", () => {
-        deleteTestimonial(button.dataset.id);
-      });
-    });
-}
-
-async function uploadTestimonialImages(files) {
-  const fileError = validateContentImages(files, []);
-  if (fileError) throw new Error(fileError);
-  const imageUrls = [];
-  try {
-    // Sequential uploads preserve image order and finish before any partial rollback.
-    for (const [index, file] of files.entries()) {
-      const suffix = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "jpg";
-      const extension = /^[a-z0-9]{1,10}$/.test(suffix) ? suffix : "jpg";
-      const id = crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
-      const path = `testimonials/${id}.${extension}`;
-      const bucket = db.storage.from(TESTIMONIAL_IMAGE_BUCKET);
-      const { data } = bucket.getPublicUrl(path);
-      if (!data?.publicUrl || getTestimonialImagePath(data.publicUrl) !== path) {
-        throw new Error("Unable to generate a valid testimonial image URL.");
-      }
-      const { error } = await bucket.upload(path, file, {
-        cacheControl: "31536000", upsert: false
-      });
-      if (error) throw new Error(`Unable to upload ${file.name}: ${error.message}`);
-      imageUrls.push(data.publicUrl);
-    }
-    return imageUrls;
-  } catch (error) {
-    try {
-      await removeTestimonialImages(imageUrls);
-    } catch (cleanupError) {
-      throw new Error(`${error.message} New-image rollback also failed: ${cleanupError.message}. Manual Storage cleanup may be needed.`);
-    }
+    testimonialList.innerHTML = '<div class="empty-state">Unable to load testimonials.</div>';
     throw error;
   }
-}
-
-function getTestimonialImagePath(value) {
-  if (typeof value !== "string" || /[\\\x00-\x20\x7f]/.test(value)) {
-    return null;
-  }
-
-  try {
-    // URL() normalizes dot segments, so reject traversal in the original path first.
-    const rawPath = value.match(/^https?:\/\/[^/]+(\/[^?#]*)/i)?.[1];
-    if (!rawPath || rawPath.split("/").some(part => [".", ".."].includes(decodeURIComponent(part)))) {
-      return null;
-    }
-    const url = new URL(value);
-    const projectUrl = new URL(SUPABASE_URL);
-    const prefix =
-      `/storage/v1/object/public/${TESTIMONIAL_IMAGE_BUCKET}/`;
-
-    if (
-      url.origin !== projectUrl.origin || url.username || url.password ||
-      !url.pathname.startsWith(prefix)
-    ) {
-      return null;
-    }
-
-    const path = decodeURIComponent(url.pathname.slice(prefix.length));
-
-    if (
-      !path.startsWith("testimonials/") || /[\\%\x00-\x20\x7f]/.test(path) ||
-      path.split("/").some(part => !part || part === "." || part === "..")
-    ) {
-      return null;
-    }
-
-    return path;
-  } catch {
-    return null;
-  }
-}
-
-async function removeTestimonialImages(imageUrls) {
-  const paths = [...new Set(imageUrls.map(getTestimonialImagePath).filter(Boolean))];
-  if (!paths.length) return;
-  const { error } = await db.storage.from(TESTIMONIAL_IMAGE_BUCKET).remove(paths);
-  if (error) throw new Error(`Testimonial Storage cleanup failed: ${error.message}`);
+  publishedTestimonials.clear();
+  testimonialList.innerHTML = (data || []).map(post => {
+    publishedTestimonials.set(String(post.id), post);
+    const id = YouTube.idFromPost(post);
+    const url = post.youtube_url || (id ? `https://www.youtube.com/watch?v=${id}` : "Missing YouTube URL");
+    return `<article class="admin-testimonial">
+      ${id ? `<img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="" loading="lazy">` : '<div class="admin-testimonial-thumb">No video</div>'}
+      <p>${escapeHtml(url)}</p>
+      <div class="admin-actions">
+        <button type="button" class="edit-testimonial edit-post" data-id="${escapeHtml(post.id)}">Edit</button>
+        <button type="button" class="delete-testimonial" data-id="${escapeHtml(post.id)}">Delete</button>
+      </div>
+    </article>`;
+  }).join("") || '<div class="empty-state">No testimonials have been published yet.</div>';
+  testimonialList.querySelectorAll(".edit-testimonial").forEach(button =>
+    button.addEventListener("click", () => openTestimonialEditor(button.dataset.id)));
+  testimonialList.querySelectorAll(".delete-testimonial").forEach(button =>
+    button.addEventListener("click", () => deleteTestimonial(button.dataset.id)));
 }
 
 async function deleteTestimonial(id) {
-  const confirmed =
-    window.confirm(
-      "Are you sure you want to delete this testimonial?"
-    );
-
-  if (!confirmed) {
-    return;
-  }
-
-  let failureMessage =
-    "Unable to load the testimonial for deletion. Nothing was deleted.";
-
+  if (!window.confirm("Are you sure you want to delete this testimonial?")) return;
   try {
-    const { data: testimonial, error: fetchError } = await db
-      .from("agent_testimonials")
-      .select("image_urls,thumbnail_url")
-      .eq("id", id)
-      .single();
-
-    if (fetchError) {
-      throw fetchError;
-    }
-
-    const imageUrls = Array.isArray(testimonial.image_urls)
-      ? testimonial.image_urls
-      : [];
-    const cleanupUrls = [...imageUrls, testimonial.thumbnail_url];
-    const hasImages = cleanupUrls.some(url => getTestimonialImagePath(url));
-
-    if (hasImages) {
-      failureMessage =
-        "Unable to delete the testimonial images. The testimonial was kept. Check Storage delete permissions and try again.";
-
-      await removeTestimonialImages(cleanupUrls);
-    }
-
-    failureMessage = hasImages
-      ? "Images were removed, but the testimonial row could not be deleted. Check database delete permissions and retry deletion."
-      : "Unable to delete the testimonial row. Check database delete permissions and try again.";
-
-    const { data: deleted, error: deleteError } = await db
-      .from("agent_testimonials")
-      .delete()
-      .eq("id", id)
-      .select("id")
-      .single();
-
-    if (deleteError || !deleted?.id) {
-      throw deleteError || new Error("No deleted testimonial ID was returned.");
-    }
+    const { data, error } = await db.from("agent_testimonials").delete().eq("id", id).select("id").single();
+    if (error || !data?.id) throw error || new Error("No deleted testimonial ID was returned.");
   } catch (error) {
-    console.error("Testimonial delete error:", error);
-    alert(
-      `${failureMessage}${error?.message ? ` ${error.message}` : ""}`
-    );
-
+    alert(`Unable to delete testimonial: ${error.message}`);
     return;
   }
-
   testimonialMessage.textContent = "Testimonial deleted successfully.";
-  const rebuild = requestSiteRebuild(testimonialMessage);
-  try { await loadTestimonials(); } catch { testimonialMessage.textContent += " Reload the page to refresh the list."; }
-  await rebuild;
+  try { await loadTestimonials(); } catch { testimonialMessage.textContent += " Reload to refresh the list."; }
 }
 
-function getTestimonialCover(testimonial) {
-  const thumbnail = typeof testimonial.thumbnail_url === "string" ? testimonial.thumbnail_url.trim() : "";
-  const images = Array.isArray(testimonial.image_urls) ? testimonial.image_urls : [];
-  // No automatic YouTube covers for newly published posts.
-  return thumbnail || images[0] || "";
+const testimonialEditor = document.getElementById("testimonial-editor");
+const testimonialEditForm = document.getElementById("testimonial-edit-form");
+const testimonialEditUrl = document.getElementById("testimonial-edit-url");
+const testimonialEditMessage = document.getElementById("testimonial-edit-message");
+let testimonialEditId = null;
+let testimonialSaving = false;
+
+function openTestimonialEditor(id) {
+  if (testimonialSaving) return;
+  const post = publishedTestimonials.get(String(id));
+  if (!post) return;
+  testimonialEditId = post.id;
+  testimonialEditUrl.value = post.youtube_url || (YouTube.validId(post.youtube_id) ? `https://www.youtube.com/watch?v=${post.youtube_id}` : "");
+  testimonialEditMessage.textContent = "";
+  testimonialEditor.showModal();
+  testimonialEditUrl.focus();
+}
+
+function closeTestimonialEditor() {
+  if (testimonialSaving) return;
+  testimonialEditor.close();
+  testimonialEditId = null;
+  testimonialEditForm.reset();
+}
+document.getElementById("testimonial-edit-cancel").addEventListener("click", closeTestimonialEditor);
+testimonialEditor.addEventListener("cancel", event => { event.preventDefault(); closeTestimonialEditor(); });
+testimonialEditForm.addEventListener("submit", saveTestimonialEdit);
+
+async function saveTestimonialEdit(event) {
+  event.preventDefault();
+  if (testimonialSaving || testimonialEditId == null) return;
+  const youtubeUrl = testimonialEditUrl.value.trim();
+  const youtubeId = extractYoutubeId(youtubeUrl);
+  if (!isSupportedVideoYoutubeUrl(youtubeUrl, youtubeId)) {
+    testimonialEditMessage.textContent = "Enter a valid YouTube or YouTube Shorts URL.";
+    return;
+  }
+  const button = testimonialEditForm.querySelector('button[type="submit"]');
+  testimonialSaving = true;
+  button.disabled = true;
+  testimonialEditMessage.textContent = "Saving changes...";
+  try {
+    const { data, error } = await db.from("agent_testimonials")
+      .update({ youtube_url: youtubeUrl, youtube_id: youtubeId }).eq("id", testimonialEditId).select("id").single();
+    if (error || !data?.id) throw error || new Error("No testimonial was updated.");
+  } catch (error) {
+    testimonialEditMessage.textContent = `Unable to save testimonial: ${error.message}`;
+    return;
+  } finally {
+    testimonialSaving = false;
+    button.disabled = false;
+  }
+  closeTestimonialEditor();
+  testimonialMessage.textContent = "Testimonial changes saved successfully.";
+  try { await loadTestimonials(); } catch { testimonialMessage.textContent += " Reload to refresh the list."; }
 }
 
 function validateContentImages(images, thumbnails, retainedCount = 0) {
@@ -771,8 +574,8 @@ function attachEditButtons(container) {
 }
 
 function openContentEditor(kind, id) {
-  if (contentEditState?.saving) return;
-  const post = (kind === "article" ? publishedVideos : publishedTestimonials).get(String(id));
+  if (kind !== "article" || contentEditState?.saving) return;
+  const post = publishedVideos.get(String(id));
   if (!post) return;
   editForm.reset();
   contentEditState = {
@@ -783,7 +586,7 @@ function openContentEditor(kind, id) {
   editTitle.value = post.title || "";
   RichText.set(editArticle, post.article || "");
   editYoutube.value = post.youtube_url || (post.youtube_id ? `https://www.youtube.com/watch?v=${encodeURIComponent(post.youtube_id)}` : "");
-  document.getElementById("edit-heading").textContent = kind === "article" ? "Edit Article" : "Edit Testimonial";
+  document.getElementById("edit-heading").textContent = "Edit Article";
   editArticle.required = false;
   editMessage.textContent = "";
   renderEditImages();
@@ -931,49 +734,6 @@ async function persistArticleEdit(original, draft) {
   }
 }
 
-async function persistTestimonialEdit(original, draft) {
-  const uploaded = [];
-  let imageUrls;
-  let thumbnailUrl;
-  try {
-    const added = await uploadTestimonialImages(draft.newImages);
-    uploaded.push(...added);
-    thumbnailUrl = draft.thumbnailMode === "remove" ? null : original.thumbnail_url || null;
-    if (draft.thumbnailMode === "replace") {
-      const thumbnails = await uploadTestimonialImages(draft.thumbnails);
-      uploaded.push(...thumbnails);
-      thumbnailUrl = thumbnails[0] || null;
-    }
-    imageUrls = [...draft.retainedImages, ...added];
-    const { data, error } = await Content.write(db, "agent_testimonials", {
-        title: draft.title, article: draft.article,
-        youtube_url: draft.youtube_url || null, youtube_id: draft.youtube_id || null,
-        image_urls: imageUrls, thumbnail_url: thumbnailUrl
-      }, original);
-    if (error || !data?.id) {
-      throw new Error(`Database update failed: ${error?.message || "No testimonial was updated. Check UPDATE permissions."}`);
-    }
-  } catch (error) {
-    try {
-      await removeTestimonialImages(uploaded);
-    } catch (cleanupError) {
-      throw new Error(`${error.message} New-image rollback also failed: ${cleanupError.message}. Manual Storage cleanup may be needed.`);
-    }
-    throw error;
-  }
-
-  // Compare validated paths, not URLs: query strings must not turn retained files into deletions.
-  const retained = new Set([...imageUrls, thumbnailUrl].map(getTestimonialImagePath).filter(Boolean));
-  const obsolete = [...(original.image_urls || []), original.thumbnail_url]
-    .filter(url => getTestimonialImagePath(url) && !retained.has(getTestimonialImagePath(url)));
-  try {
-    await removeTestimonialImages(obsolete);
-    return "";
-  } catch (error) {
-    return `Changes were saved, but obsolete testimonial image cleanup failed: ${error.message}. Manual Storage cleanup may be needed.`;
-  }
-}
-
 async function saveContentEdits(event) {
   event.preventDefault();
   const state = contentEditState;
@@ -994,25 +754,12 @@ async function saveContentEdits(event) {
     editMessage.textContent = "Enter a valid YouTube watch, Shorts, youtu.be or embed link, or leave the YouTube field blank.";
     return;
   }
-  if (state.kind === "testimonial" && !RichText.text(draft.article)) {
-    editMessage.textContent = "Add article text first.";
-    return;
-  }
   state.saving = true;
   editFields.disabled = true;
   editMessage.textContent = "Saving changes...";
   let warning;
   try {
-    warning = state.kind === "testimonial"
-      ? await persistTestimonialEdit(state.original, draft)
-      : await persistArticleEdit(state.original, draft);
-    if (state.kind === "testimonial") {
-      try {
-        await loadTestimonials();
-      } catch {
-        warning = `${warning || "Testimonial changes saved successfully."} Reload the page to refresh the published list.`;
-      }
-    }
+    warning = await persistArticleEdit(state.original, draft);
   } catch (error) {
     editMessage.textContent = `Unable to save changes. ${error.message}`;
     return;
@@ -1021,11 +768,6 @@ async function saveContentEdits(event) {
     editFields.disabled = false;
   }
   closeContentEditor();
-  if (state.kind === "testimonial") {
-    testimonialMessage.textContent = warning || "Testimonial changes saved successfully.";
-    await requestSiteRebuild(testimonialMessage);
-    return;
-  }
   messageBox.textContent = warning || "Article changes saved successfully.";
   const rebuild = requestSiteRebuild(messageBox);
   try {
@@ -1037,31 +779,7 @@ async function saveContentEdits(event) {
 }
 
 function extractYoutubeId(url) {
-  if (typeof url !== "string" || !url.trim()) {
-    return "";
-  }
-
-  try {
-    const parsed = new URL(url);
-    if (!["https:", "http:"].includes(parsed.protocol) || parsed.username || parsed.password) {
-      return "";
-    }
-    // Normalize one optional trailing slash without discarding extra path segments.
-    const pathname = parsed.pathname.replace(/\/$/, "");
-    let id = "";
-    if (["youtu.be", "www.youtu.be"].includes(parsed.hostname)) {
-      id = pathname.slice(1);
-    } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(parsed.hostname)) {
-      id = pathname === "/watch"
-        ? parsed.searchParams.get("v") || ""
-        : pathname.match(/^\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})$/)?.[1] || "";
-    } else if (["youtube-nocookie.com", "www.youtube-nocookie.com"].includes(parsed.hostname)) {
-      id = pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})$/)?.[1] || "";
-    }
-    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : "";
-  } catch {
-    return "";
-  }
+  return YouTube.extractId(url);
 }
 
 function trimWords(value, limit) {

@@ -123,6 +123,8 @@ async function setup(slugsEnabled = false) {
   });
   vm.runInContext(fs.readFileSync(path.join(root, 'content.js'), 'utf8'), context);
   context.Content = context.window.Content;
+  vm.runInContext(fs.readFileSync(path.join(root, "youtube.js"), "utf8"), context);
+  context.YouTube = context.window.YouTube;
   vm.runInContext(source, context);
   await new Promise(resolve => setImmediate(resolve));
   const run = expression => vm.runInContext(expression, context);
@@ -185,7 +187,6 @@ test('shared YouTube parser accepts Shorts and legacy URLs with strict hosts, pa
 
 for (const [kind, table, prefix, formId, youtubeField] of [
   ['article', 'education_videos', 'video', 'video-form', 'youtube-url'],
-  ['testimonial', 'agent_testimonials', 'testimonial', 'testimonial-form', 'testimonial-youtube-url']
 ]) {
   for (const [format, url] of [
     ['Shorts', 'https://www.youtube.com/shorts/abcdefghijk/?si=ABC'],
@@ -229,7 +230,6 @@ for (const [kind, table, prefix, formId, youtubeField] of [
 
 for (const [kind, table, prefix, formId, id, messageId] of [
   ['article', 'education_videos', 'video', 'video-form', 'article-1', 'admin-message'],
-  ['testimonial', 'agent_testimonials', 'testimonial', 'testimonial-form', 'testimonial-1', 'testimonial-message']
 ]) {
   for (const action of ['insert', 'update', 'delete']) {
     test(`${kind} ${action} dispatches only after DB success; dispatch failure never rolls back content`, async () => {
@@ -261,7 +261,7 @@ for (const [kind, table, prefix, formId, id, messageId] of [
 }
 
 test('image-only edits and saved-with-cleanup-warning still request rebuilds', async () => {
-  for (const [kind, id, messageId] of [['article', 'article-1', 'admin-message'], ['testimonial', 'testimonial-1', 'testimonial-message']]) {
+  for (const [kind, id, messageId] of [['article', 'article-1', 'admin-message']]) {
     const h = await setup(); h.context.openContentEditor(kind, id);
     await h.nodes['edit-remove-thumbnail'].click(); h.failures.remove = true;
     await h.nodes['content-edit-form'].dispatch('submit');
@@ -283,7 +283,6 @@ test('delayed rebuild feedback does not overwrite newer CMS feedback', async () 
 
 for (const [kind, table, prefix, formId] of [
   ['article', 'education_videos', 'video', 'video-form'],
-  ['testimonial', 'agent_testimonials', 'testimonial', 'testimonial-form']
 ]) {
   test(`${kind} publishing/editing combines sanitized rich text, stable slugs and separate media`, async () => {
     const h = await setup(true);
@@ -308,7 +307,7 @@ for (const [kind, table, prefix, formId] of [
 
 test('Single optional thumbnail inputs and published Edit/Delete actions', async () => {
   const h = await setup();
-  for (const id of ['video-thumbnail', 'testimonial-thumbnail', 'edit-thumbnail']) {
+  for (const id of ['video-thumbnail', 'edit-thumbnail']) {
     const tag = html.match(new RegExp(`<input[^>]*id="${id}"[^>]*>`))[0];
     assert.match(tag, /accept="image\/\*"/); assert.doesNotMatch(tag, /multiple|required/);
   }
@@ -317,9 +316,9 @@ test('Single optional thumbnail inputs and published Edit/Delete actions', async
   }
 });
 
-test('Both editors populate fields; Cancel discards all pending images without writes', async () => {
+test('Article editor populates fields; Cancel discards all pending images without writes', async () => {
   const h = await setup();
-  for (const [kind, id] of [['article', 'article-1'], ['testimonial', 'testimonial-1']]) {
+  for (const [kind, id] of [['article', 'article-1']]) {
     h.context.openContentEditor(kind, id);
     assert(h.nodes['edit-title'].value); assert(h.nodes['edit-article'].value);
     assert(h.nodes['edit-existing-images'].children.length);
@@ -434,218 +433,11 @@ test('A thumbnail also retained in the carousel is not deleted', async () => {
   assert.equal(h.calls.filter(call => call.action === 'remove').length, 0);
 });
 
-for (const [name, galleryCount, thumbnail, youtube] of [
-  ['thumbnail only, no YouTube', 0, true, false],
-  ['no thumbnail or gallery', 0, false, false],
-  ['gallery and thumbnail with YouTube', 2, true, true],
-  ['gallery without thumbnail', 2, false, false],
-  ['ten gallery images and separate thumbnail', 10, true, false]
-]) {
-  test(`Testimonial publishing: ${name}`, async () => {
-    const h = await setup();
-    h.nodes['testimonial-title'].value = 'New testimonial'; h.nodes['testimonial-article'].value = 'Article text';
-    h.nodes['testimonial-youtube-url'].value = youtube ? 'https://www.youtube.com/watch?v=abcdefghijk' : '';
-    h.nodes['testimonial-images'].files = Array.from({ length: galleryCount }, (_, i) => file(`gallery-${i}`));
-    h.nodes['testimonial-thumbnail'].files = thumbnail ? [file('dedicated')] : [];
-    await h.nodes['testimonial-form'].dispatch('submit');
-    const insert = h.calls.find(call => call.action === 'insert');
-    assert.equal(insert.table, 'agent_testimonials'); assert.equal(insert.fields, 'id');
-    assert.equal(insert.payload.image_urls.length, galleryCount);
-    assert.equal(Boolean(insert.payload.thumbnail_url), thumbnail);
-    assert(!insert.payload.image_urls.includes(insert.payload.thumbnail_url));
-    assert.equal(insert.payload.youtube_id, youtube ? 'abcdefghijk' : null);
-    assert.equal(insert.payload.youtube_url === null, !youtube);
-    const uploads = h.calls.filter(c => c.action === 'upload');
-    assert(uploads.every(c => c.bucket === 'testimonial-images' && c.path.startsWith('testimonials/') && c.options.upsert === false && c.options.cacheControl === '31536000'));
-    assert.equal(new Set(uploads.map(c => c.path)).size, galleryCount + Number(thumbnail));
-    assert.deepEqual(uploads.slice(0, galleryCount).map(c => c.file.name), Array.from({ length: galleryCount }, (_, i) => `gallery-${i}.jpg`));
-    assert.match(h.nodes['testimonial-message'].textContent, /published successfully.*Database ID/);
-    assert.equal(h.nodes['testimonial-title'].value, '');
-  });
-}
-
-for (const mode of ['keep', 'replace', 'remove']) {
-  test(`Testimonial edit ${mode} thumbnail and title/article`, async () => {
-    const h = await setup(); h.context.openContentEditor('testimonial', 'testimonial-1');
-    assert.equal(h.nodes['edit-thumbnail-preview'].children[0].children[0].src, imageUrl('cover', 'testimonial-images'));
-    h.nodes['edit-title'].value = 'Edited title'; h.nodes['edit-article'].value = 'Edited article';
-    if (mode === 'replace') { h.nodes['edit-thumbnail'].files = [file('replacement')]; await h.nodes['edit-thumbnail'].dispatch('change'); }
-    if (mode === 'remove') await h.nodes['edit-remove-thumbnail'].click();
-    assert.equal(writes(h.calls).length, 0);
-    await h.nodes['content-edit-form'].dispatch('submit');
-    const row = h.rows.agent_testimonials[0];
-    assert.equal(row.title, 'Edited title'); assert.equal(row.article, 'Edited article');
-    assert.equal(row.image_urls[0], imageUrl('one', 'testimonial-images'));
-    assert.equal(h.nodes['content-editor'].open, false);
-    assert.match(h.nodes['testimonial-message'].textContent, /saved successfully/);
-    assert.equal(h.calls.find(c => c.action === 'update').fields, 'id');
-    if (mode === 'keep') {
-      assert.equal(row.thumbnail_url, imageUrl('cover', 'testimonial-images'));
-      assert.deepEqual(writes(h.calls).map(c => c.action), ['update']);
-    } else {
-      assert.equal(mode === 'remove' ? row.thumbnail_url === null : row.thumbnail_url.includes('unique-'), true);
-      assert.deepEqual(writes(h.calls).map(c => c.action), mode === 'replace' ? ['upload', 'update', 'remove'] : ['update', 'remove']);
-      assert.deepEqual([...h.calls.find(c => c.action === 'remove').paths], ['testimonials/cover.jpg']);
-    }
-  });
-}
-
-test('Testimonial gallery removal/addition saves before obsolete cleanup and enforces combined limit', async () => {
-  const h = await setup(); h.context.openContentEditor('testimonial', 'testimonial-1');
-  h.nodes['edit-images'].files = Array.from({ length: 10 }, (_, i) => file(`new-${i}`));
-  await h.nodes['edit-images'].dispatch('change'); await h.nodes['content-edit-form'].dispatch('submit');
-  assert.match(h.nodes['edit-message'].textContent, /1 existing \+ 10 new = 11/); assert.equal(writes(h.calls).length, 0);
-  await h.nodes['edit-existing-images'].children[0].children[1].click();
-  assert.equal(writes(h.calls).length, 0);
-  await h.nodes['content-edit-form'].dispatch('submit');
-  assert.equal(h.rows.agent_testimonials[0].image_urls.length, 10);
-  assert.deepEqual(writes(h.calls).map(c => c.action), [...Array(10).fill('upload'), 'update', 'remove']);
-  assert.deepEqual([...h.calls.find(c => c.action === 'remove').paths], ['testimonials/one.jpg']);
-});
-
-for (const stage of ['gallery', 'thumbnail', 'insert']) {
-  test(`Testimonial publish ${stage} failure rolls back only this submission`, async () => {
-    const h = await setup(); const before = JSON.stringify(h.rows);
-    if (stage === 'insert') h.failures.insert = true; else h.failures.upload = stage === 'gallery' ? 'two.jpg' : 'cover.jpg';
-    h.nodes['testimonial-title'].value = 'Preserved title'; h.nodes['testimonial-article'].value = 'Preserved text';
-    h.nodes['testimonial-images'].files = [file('one'), file('two')]; h.nodes['testimonial-thumbnail'].files = [file('cover')];
-    await h.nodes['testimonial-form'].dispatch('submit');
-    assert.equal(JSON.stringify(h.rows), before);
-    assert.equal(h.nodes['testimonial-article'].value, 'Preserved text');
-    assert.match(h.nodes['testimonial-message'].textContent, /not published/);
-    const paths = h.calls.filter(c => c.action === 'remove').flatMap(c => [...c.paths]);
-    assert.equal(paths.length, stage === 'gallery' ? 1 : stage === 'thumbnail' ? 2 : 3);
-    assert(paths.every(p => p.startsWith('testimonials/unique-')));
-    assert(h.calls.filter(c => c.action === 'remove').every(c => c.bucket === 'testimonial-images'));
-  });
-}
-
-for (const stage of ['gallery', 'thumbnail', 'update']) {
-  test(`Testimonial edit ${stage} failure preserves old row/files and draft`, async () => {
-    const h = await setup(); const before = JSON.stringify(h.rows);
-    if (stage === 'update') h.failures.update = true; else h.failures.upload = stage === 'gallery' ? 'two.jpg' : 'replacement.jpg';
-    h.context.openContentEditor('testimonial', 'testimonial-1');
-    h.nodes['edit-article'].value = 'Preserved edit';
-    await h.nodes['edit-existing-images'].children[0].children[1].click();
-    h.nodes['edit-images'].files = [file('one'), file('two')]; await h.nodes['edit-images'].dispatch('change');
-    h.nodes['edit-thumbnail'].files = [file('replacement')]; await h.nodes['edit-thumbnail'].dispatch('change');
-    await h.nodes['content-edit-form'].dispatch('submit');
-    assert.equal(JSON.stringify(h.rows), before); assert.equal(h.nodes['edit-article'].value, 'Preserved edit');
-    assert.equal(h.nodes['content-editor'].open, true); assert.match(h.nodes['edit-message'].textContent, /Unable to save/);
-    const paths = h.calls.filter(c => c.action === 'remove').flatMap(c => [...c.paths]);
-    assert.equal(paths.length, stage === 'gallery' ? 1 : stage === 'thumbnail' ? 2 : 3);
-    assert(paths.every(p => p.startsWith('testimonials/unique-')));
-  });
-}
-
-test('Testimonial cleanup warning does not undo a successful update', async () => {
-  const h = await setup(); h.failures.remove = true;
-  h.context.openContentEditor('testimonial', 'testimonial-1');
-  await h.nodes['edit-remove-thumbnail'].click(); await h.nodes['content-edit-form'].dispatch('submit');
-  assert.equal(h.rows.agent_testimonials[0].thumbnail_url, null);
-  assert.match(h.nodes['testimonial-message'].textContent, /saved.*cleanup failed/);
-  assert.equal(h.nodes['content-editor'].open, false);
-});
-
-test('Testimonial shared references survive thumbnail or gallery removal', async () => {
-  for (const removal of ['thumbnail', 'gallery']) {
-    const h = await setup(); h.rows.agent_testimonials[0].thumbnail_url = imageUrl('one', 'testimonial-images') + '?download=1';
-    await h.context.loadTestimonials(); h.calls.length = 0;
-    h.context.openContentEditor('testimonial', 'testimonial-1');
-    if (removal === 'thumbnail') await h.nodes['edit-remove-thumbnail'].click();
-    else await h.nodes['edit-existing-images'].children[0].children[1].click();
-    await h.nodes['content-edit-form'].dispatch('submit');
-    assert.equal(h.calls.filter(c => c.action === 'remove').length, 0);
-  }
-});
-
-test('Testimonial validation rejects empty required content, bad YouTube links and excess files before writes', async () => {
-  for (const invalid of ['title', 'article', 'youtube', 'images', 'thumbnail', 'mime']) {
-    const h = await setup(); h.nodes['testimonial-title'].value = 'Title'; h.nodes['testimonial-article'].value = 'Text';
-    if (invalid === 'title' || invalid === 'article') h.nodes[`testimonial-${invalid}`].value = ' ';
-    if (invalid === 'youtube') h.nodes['testimonial-youtube-url'].value = 'https://not-youtube.example/watch?v=abcdefghijk';
-    if (invalid === 'images') h.nodes['testimonial-images'].files = Array(11).fill(file('too-many'));
-    if (invalid === 'thumbnail') h.nodes['testimonial-thumbnail'].files = [file('one'), file('two')];
-    if (invalid === 'mime') h.nodes['testimonial-thumbnail'].files = [{ name: 'bad.txt', type: 'text/plain' }];
-    await h.nodes['testimonial-form'].dispatch('submit'); assert.equal(writes(h.calls).length, 0, invalid);
-  }
-  const h = await setup(); h.context.openContentEditor('testimonial', 'testimonial-1'); h.nodes['edit-article'].value = '';
-  await h.nodes['content-edit-form'].dispatch('submit'); assert.equal(writes(h.calls).length, 0);
-});
-
-test('Testimonial double publishing/saving is ignored and missing returned IDs are errors', async () => {
-  const h = await setup(); h.nodes['testimonial-title'].value = 'Title'; h.nodes['testimonial-article'].value = 'Text';
-  await Promise.all([h.nodes['testimonial-form'].dispatch('submit'), h.nodes['testimonial-form'].dispatch('submit')]);
-  assert.equal(h.calls.filter(c => c.action === 'insert').length, 1);
-  h.context.openContentEditor('testimonial', 'testimonial-1'); h.calls.length = 0;
-  await Promise.all([h.nodes['content-edit-form'].dispatch('submit'), h.nodes['content-edit-form'].dispatch('submit')]);
-  assert.equal(h.calls.filter(c => c.action === 'update').length, 1);
-  for (const action of ['insert', 'update']) {
-    const h = await setup(); h.failures.noId = action;
-    if (action === 'insert') {
-      h.nodes['testimonial-title'].value = 'Title'; h.nodes['testimonial-article'].value = 'Text';
-      h.nodes['testimonial-thumbnail'].files = [file('new')]; await h.nodes['testimonial-form'].dispatch('submit');
-      assert.match(h.nodes['testimonial-message'].textContent, /No testimonial ID/);
-    } else {
-      h.context.openContentEditor('testimonial', 'testimonial-1'); h.nodes['edit-thumbnail'].files = [file('new')];
-      await h.nodes['edit-thumbnail'].dispatch('change'); await h.nodes['content-edit-form'].dispatch('submit');
-      assert.match(h.nodes['edit-message'].textContent, /No testimonial was updated/);
-    }
-    assert.equal(h.calls.filter(c => c.action === 'remove').length, 1);
-  }
-});
-
-test('Testimonial deletion validates and deduplicates gallery/thumbnail URLs', async () => {
-  const h = await setup();
-  const bad = [null, 'bad', imageUrl('bad'), imageUrl('bad', 'testimonial-images').replace(origin, 'https://foreign.supabase.co'),
-    `${origin}/storage/v1/object/public/testimonial-images/testimonials/../testimonials/safe.jpg`,
-    `${origin}/storage/v1/object/public/testimonial-images/testimonials/%2e%2e/other.jpg`,
-    `${origin}/storage/v1/object/public/testimonial-images/testimonials/%252e%252e/other.jpg`,
-    `${origin}/storage/v1/object/public/testimonial-images/testimonials/%00.jpg`,
-    `${origin}/storage/v1/object/public/testimonial-images/testimonials/bad\n.jpg`,
-    `${origin}/storage/v1/object/public/testimonial-images/other/file.jpg`,
-    `${origin}/storage/v1/object/public/testimonial-images/testimonials/%zz.jpg`];
-  for (const value of bad) assert.equal(h.context.getTestimonialImagePath(value), null, String(value));
-  const good = imageUrl('one', 'testimonial-images');
-  h.rows.agent_testimonials[0].image_urls = [good, good + '?download=1', ...bad];
-  h.rows.agent_testimonials[0].thumbnail_url = good;
-  await h.context.deleteTestimonial('testimonial-1');
-  const removal = h.calls.find(c => c.action === 'remove');
-  assert.equal(removal.bucket, 'testimonial-images'); assert.deepEqual([...removal.paths], ['testimonials/one.jpg']);
-  assert.deepEqual(writes(h.calls).map(c => c.action), ['remove', 'delete']);
-});
-
-test('Testimonial deletion handles thumbnail-only and cleanup/database errors clearly', async () => {
-  for (const failure of [null, 'remove', 'delete']) {
-    const h = await setup(); h.rows.agent_testimonials[0].image_urls = [];
-    if (failure) h.failures[failure] = true;
-    await h.context.deleteTestimonial('testimonial-1');
-    assert.deepEqual([...h.calls.find(c => c.action === 'remove').paths], ['testimonials/cover.jpg']);
-    if (failure === 'remove') assert(!h.calls.some(c => c.action === 'delete'));
-    if (failure) assert(h.calls.some(c => c.action === 'alert')); else assert.equal(h.rows.agent_testimonials.length, 0);
-  }
-});
-
-test('Public testimonial query/cover supports thumbnail without YouTube generation; stale guards removed', async () => {
-  const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  const query = index.slice(index.indexOf('async function loadTestimonials'), index.indexOf('if (error)', index.indexOf('async function loadTestimonials')));
-  assert.match(query, /thumbnail_url/);
-  const helper = index.match(/function getTestimonialCover\(item\) \{[\s\S]*?\n    \}/)[0];
-  const ctx = vm.createContext({}); vm.runInContext(helper, ctx);
-  assert.equal(ctx.getTestimonialCover({ thumbnail_url: 'dedicated', image_urls: ['gallery'] }), 'dedicated');
-  assert.equal(ctx.getTestimonialCover({ image_urls: ['gallery'] }), 'gallery');
-  assert.equal(ctx.getTestimonialCover({ youtube_id: 'abcdefghijk' }), '');
-  assert.doesNotMatch(source + html, /TESTIMONIAL_EDIT_NOTICE|backend update|Nothing will be saved|upcoming backend/i);
-});
-
-test('Deletion cleans each bucket correctly, including dedicated article thumbnail', async () => {
+test('Article deletion cleans its bucket, including dedicated thumbnail', async () => {
   const h = await setup();
   await h.context.deleteVideo('article-1');
   assert.deepEqual(writes(h.calls).map(call => call.action), ['remove', 'delete']);
   assert.equal(h.calls.find(call => call.action === 'remove').paths.length, 3);
-  h.calls.length = 0; await h.context.deleteTestimonial('testimonial-1');
-  assert.deepEqual(writes(h.calls).map(call => call.action), ['remove', 'delete']);
-  assert.equal(h.calls.find(call => call.action === 'remove').bucket, 'testimonial-images');
   for (const unsafe of ['bad', imageUrl('bad').replace(origin, 'https://another.supabase.co'), imageUrl('bad', 'testimonial-images'), `${origin}/storage/v1/object/public/video-images/videos/%2E%2E/other.jpg`]) assert.equal(h.context.getVideoImagePath(unsafe), null);
 });
 
@@ -653,13 +445,99 @@ test('Storage deletion failure keeps article row; cover helpers do not generate 
   const h = await setup(); h.failures.remove = true; await h.context.deleteVideo('article-1');
   assert(!h.calls.some(call => call.action === 'delete')); assert.equal(h.rows.education_videos.length, 1);
   assert.equal(h.context.getVideoCover({ thumbnail_url: 'dedicated', image_urls: ['gallery'] }), 'dedicated');
-  assert.equal(h.context.getTestimonialCover({ thumbnail_url: 'dedicated', image_urls: ['gallery'] }), 'dedicated');
-  assert.equal(h.context.getTestimonialCover({ youtube_id: 'abcdefghijk' }), '');
+});
+
+
+test('Testimonial forms have only a required URL; list retains Edit and Delete', async () => {
+  const h = await setup();
+  const dom = new JSDOM(html);
+  for (const id of ['testimonial-form', 'testimonial-edit-form']) {
+    const fields = [...dom.window.document.getElementById(id).querySelectorAll('input,textarea')];
+    assert.equal(fields.length, 1); assert.equal(fields[0].type, 'url'); assert(fields[0].required);
+  }
+  assert.doesNotMatch(source, /TESTIMONIAL_IMAGE_BUCKET|uploadTestimonialImages|removeTestimonialImages|getTestimonialImagePath|persistTestimonialEdit/);
+  assert.match(h.nodes['admin-testimonial-list'].innerHTML, /edit-testimonial/);
+  dom.window.close();
+});
+
+for (const url of ['https://www.youtube.com/shorts/abcdefghijk/?si=test', 'https://www.youtube.com/watch?v=abcdefghijk']) {
+  test('URL-only testimonial publish/edit/delete: ' + url, async () => {
+    const h = await setup(true);
+    h.nodes['testimonial-youtube-url'].value = url;
+    await h.nodes['testimonial-form'].dispatch('submit');
+    const inserted = h.calls.find(c => c.action === 'insert');
+    assert.deepEqual(Object.keys(inserted.payload).sort(), ['youtube_id','youtube_url']);
+    assert.equal(inserted.payload.youtube_url, url);
+    assert.equal(inserted.payload.youtube_id, 'abcdefghijk');
+    h.context.openTestimonialEditor('new-post');
+    h.nodes['testimonial-edit-url'].value = 'https://youtu.be/aB0_9-zYx12';
+    await h.nodes['testimonial-edit-form'].dispatch('submit');
+    const update = h.calls.find(c => c.action === 'update');
+    assert.deepEqual(Object.keys(update.payload).sort(), ['youtube_id','youtube_url']);
+    assert.equal(update.payload.youtube_id, 'aB0_9-zYx12');
+    await h.context.deleteTestimonial('new-post');
+    assert(!h.rows.agent_testimonials.some(row => row.id === 'new-post'));
+    assert(!h.calls.some(c => ['rebuild','upload','remove'].includes(c.action)));
+    assert(!h.calls.some(c => /slug|image_urls|thumbnail_url/.test(c.fields || '') && c.table === 'agent_testimonials'));
+  });
+}
+test('Testimonials reject missing/invalid URLs before writes; cancel keeps historical fields intact', async () => {
+  for (const url of ['', 'https://evil.com/shorts/abcdefghijk', 'https://youtube.com/shorts/abc']) {
+    const h = await setup();
+    h.nodes['testimonial-youtube-url'].value = url;
+    await h.nodes['testimonial-form'].dispatch('submit');
+    h.context.openTestimonialEditor('testimonial-1');
+    h.nodes['testimonial-edit-url'].value = url;
+    await h.nodes['testimonial-edit-form'].dispatch('submit');
+    assert.equal(writes(h.calls).length, 0);
+    const original = JSON.stringify(h.rows.agent_testimonials);
+    await h.nodes['testimonial-edit-cancel'].click();
+    assert.equal(h.nodes['testimonial-editor'].open, false);
+    assert.equal(JSON.stringify(h.rows.agent_testimonials), original);
+  }
+});
+test('Testimonial failed writes retain drafts and old data; no Storage or rebuild calls', async () => {
+  for (const action of ['insert','update','delete']) {
+    for (const noId of [false,true]) {
+      const h = await setup();
+      if (noId) h.failures.noId = action; else h.failures[action] = true;
+      const original = JSON.stringify(h.rows.agent_testimonials);
+      if (action === 'insert') {
+        h.nodes['testimonial-youtube-url'].value = 'https://youtu.be/abcdefghijk';
+        await h.nodes['testimonial-form'].dispatch('submit');
+        assert.match(h.nodes['testimonial-message'].textContent, /Unable to publish/);
+        assert(h.nodes['testimonial-youtube-url'].value);
+      } else if (action === 'update') {
+        h.context.openTestimonialEditor('testimonial-1');
+        h.nodes['testimonial-edit-url'].value = 'https://youtu.be/abcdefghijk';
+        await h.nodes['testimonial-edit-form'].dispatch('submit');
+        assert.match(h.nodes['testimonial-edit-message'].textContent, /Unable to save/);
+        assert(h.nodes['testimonial-editor'].open);
+      } else {
+        await h.context.deleteTestimonial('testimonial-1');
+        assert(h.calls.some(c => c.action === 'alert'));
+      }
+      assert.equal(JSON.stringify(h.rows.agent_testimonials), original);
+      assert(!h.calls.some(c => ['rebuild','upload','remove'].includes(c.action)));
+    }
+  }
+});
+test('Testimonial edits do not mutate retained legacy data and double submits are ignored', async () => {
+  const h = await setup();
+  h.nodes['testimonial-youtube-url'].value = 'https://youtu.be/abcdefghijk';
+  await Promise.all([h.nodes['testimonial-form'].dispatch('submit'), h.nodes['testimonial-form'].dispatch('submit')]);
+  assert.equal(h.calls.filter(c => c.action === 'insert').length, 1);
+  const original = {...h.rows.agent_testimonials[0]};
+  h.context.openTestimonialEditor('testimonial-1');
+  h.nodes['testimonial-edit-url'].value = 'https://youtu.be/abcdefghijk';
+  await Promise.all([h.nodes['testimonial-edit-form'].dispatch('submit'), h.nodes['testimonial-edit-form'].dispatch('submit')]);
+  assert.equal(h.calls.filter(c => c.action === 'update').length, 1);
+  for (const key of ['title','article','image_urls','thumbnail_url']) assert.deepEqual(h.rows.agent_testimonials[0][key],original[key]);
 });
 
 (async () => {
   for (const [name, fn] of tests) { await fn(); console.log(`PASS ${name}`); }
-  for (const filename of ['admin.js', 'article.js', 'script.js']) new vm.Script(fs.readFileSync(path.join(root, filename), 'utf8'), { filename });
+  for (const filename of ['admin.js', 'article.js', 'script.js', 'youtube.js', 'testimonials.js']) new vm.Script(fs.readFileSync(path.join(root, filename), 'utf8'), { filename });
   for (const filename of ['blog.html', 'index.html', 'article.html']) {
     for (const match of fs.readFileSync(path.join(root, filename), 'utf8').matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
       if (!/\bsrc=|application\/ld\+json/i.test(match[1])) new vm.Script(match[2], { filename });

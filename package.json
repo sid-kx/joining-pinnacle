@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "vendor": "node scripts/vendor.cjs",
-    "test": "node tests/cms.test.cjs && node tests/content.test.cjs && node tests/rebuild.test.cjs",
+    "test": "node tests/cms.test.cjs && node tests/content.test.cjs && node tests/testimonials.test.cjs && node tests/rebuild.test.cjs",
     "build": "node scripts/build-pages.cjs",
     "dev": "node scripts/preview.cjs"
   },

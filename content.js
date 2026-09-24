@@ -51,7 +51,10 @@
     }
     throw new Error("Another post claimed this slug. Please retry saving.");
   }
-  function path(kind, slug) { return `/${kind === "testimonial" ? "testimonials" : "articles"}/${slug}/`; }
+  function path(kind, slug) {
+    if (kind !== "article") throw new Error("Only articles have detail routes.");
+    return `/articles/${slug}/`;
+  }
   async function loadRoutes() {
     if (!routesReady) routesReady = fetch("/post-routes.json", { cache: "no-cache" })
       .then(response => response.ok ? response.json() : [])
@@ -59,7 +62,8 @@
     return routesReady;
   }
   function url(kind, post) {
-    const template = kind === "testimonial" ? "testimonial.html" : "article.html";
+    if (kind !== "article") throw new Error("Only articles have detail routes.");
+    const template = "article.html";
     if (validSlug(post.slug)) {
       const route = path(kind, post.slug);
       return routes.has(route) ? route : `/${template}?slug=${encodeURIComponent(post.slug)}`;

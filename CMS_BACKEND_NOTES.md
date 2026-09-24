@@ -1,5 +1,9 @@
 # CMS Thumbnail and Edit Integration
 
+Historical integration notes. The testimonial portion is superseded by
+[the video-only testimonial refactor](TESTIMONIAL_VIDEO_REFACTOR.md).
+Article behavior described below remains in place.
+
 ## Current Status
 
 Both article and testimonial thumbnail publishing and editing are wired to the existing authenticated Supabase browser client. The user has confirmed the testimonial schema and policy migration is complete. This task uses mocked backend tests, not production writes or live policy introspection.

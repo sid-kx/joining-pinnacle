@@ -1,5 +1,9 @@
 # Slugs and Rich Text
 
+Historical migration notes. Testimonials no longer use detail routes, slugs, or
+rich text; see [the video-only refactor](TESTIMONIAL_VIDEO_REFACTOR.md).
+Do not reapply the testimonial slug migration. Article slugs remain unchanged.
+
 ## Activation
 
 The deployment was verified as GitHub Pages at `join.pinnaclerealty.ca`. Both

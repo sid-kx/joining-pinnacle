@@ -1,5 +1,10 @@
 # Automatic CMS Rebuilds
 
+Update: rebuild dispatch and static pages now apply to Articles only.
+Testimonials load dynamically on the homepage and do not request a rebuild.
+The historical testimonial details below are superseded by
+[the video-only refactor](TESTIMONIAL_VIDEO_REFACTOR.md).
+
 ## What Was Added
 
 - `article.html` contains the fixed author, Jag Saini · Broker of Record, between

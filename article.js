@@ -1,8 +1,8 @@
 const articleContent = document.getElementById("article-content");
 const articleStatus = document.getElementById("article-status");
 const articleMedia = document.getElementById("article-media");
-const pageKind = document.body.dataset.contentKind || "article";
-const pageLabel = pageKind === "testimonial" ? "Testimonial" : "Article";
+const pageKind = "article";
+const pageLabel = "Article";
 
 function articleElement(tag, className, text) {
   const element = document.createElement(tag);
@@ -129,7 +129,7 @@ function updateArticleMetadata(article, text, images) {
 async function loadArticle() {
   if (window.__BUILD_POST__) { renderArticle(window.__BUILD_POST__); return; }
   const params = new URLSearchParams(window.location.search);
-  const match = window.location.pathname.match(/^\/(articles|testimonials)\/([a-z0-9-]+)\/?$/);
+  const match = window.location.pathname.match(/^\/(articles)\/([a-z0-9-]+)\/?$/);
   const slug = match?.[2] || params.get("slug");
   const id = params.get("id");
   if ((!slug && !id) || (slug && !Content.validSlug(slug))) {
@@ -141,7 +141,7 @@ async function loadArticle() {
     try { const post = JSON.parse(snapshot.textContent); if (post.slug === slug) renderArticle(post); } catch { /* Fetch below remains authoritative. */ }
   }
   try {
-    const table = pageKind === "testimonial" ? "agent_testimonials" : "education_videos";
+    const table = "education_videos";
     if (slug && !(await Content.supportsSlugs(db, table))) throw new Error("Slug migration is not yet available.");
     const { data, error } = await Content.select(db, table,
       "id,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at",

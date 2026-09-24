@@ -296,27 +296,18 @@
       </div>
 
 
-      <div
-        id="testimonial-grid"
-        class="container testimonial-grid"
-      >
-        <div class="testimonial-state">
-          Loading testimonials...
+      <div class="container testimonial-gallery" id="testimonial-gallery">
+        <div id="testimonial-grid" class="testimonial-grid"></div>
+        <div id="testimonial-mobile" class="testimonial-mobile" hidden aria-roledescription="carousel" aria-label="Agent video testimonials">
+          <div id="testimonial-track" class="testimonial-track" tabindex="0" aria-label="Swipe or use arrow keys to change testimonial"></div>
+          <div id="testimonial-navigation" class="testimonial-navigation">
+            <button type="button" id="testimonial-prev" aria-label="Previous testimonial" title="Previous testimonial">&#8592;</button>
+            <span id="testimonial-position" aria-live="polite" aria-atomic="true"></span>
+            <button type="button" id="testimonial-next" aria-label="Next testimonial" title="Next testimonial">&#8594;</button>
+          </div>
         </div>
-      </div>
-
-
-      <div
-        id="testimonial-load-more-wrap"
-        class="container testimonial-load-more-wrap"
-      >
-        <button
-          id="testimonial-load-more"
-          class="testimonial-load-more"
-          type="button"
-        >
-          Load More
-        </button>
+        <p id="testimonial-state" class="testimonial-state" role="status">Loading testimonials...</p>
+        <div class="testimonial-more-wrap"><button id="testimonial-more" class="btn btn-gold" type="button" hidden>View More</button></div>
       </div>
 
     </section>
@@ -550,133 +541,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="script.js"></script>
-  <script src="vendor/purify.min.js"></script>
-  <script src="rich-text.js"></script>
-  <script src="content.js"></script>
-  <script>
-    const testimonialGrid = document.getElementById("testimonial-grid");
-    const testimonialLoadMoreWrap = document.getElementById("testimonial-load-more-wrap");
-    const testimonialLoadMore = document.getElementById("testimonial-load-more");
-
-    const TESTIMONIALS_PER_PAGE = 3;
-    let testimonials = [];
-    let visibleTestimonials = TESTIMONIALS_PER_PAGE;
-
-    async function loadTestimonials() {
-      if (!testimonialGrid || !window.db) {
-        return;
-      }
-
-      const { data, error } = await Content.select(db, "agent_testimonials", "id,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at", query => query.order("created_at", { ascending: false }));
-
-      if (error) {
-        console.error("Unable to load testimonials:", error);
-
-        testimonialGrid.innerHTML = `
-          <div class="testimonial-state">
-            Testimonials coming soon.
-          </div>
-        `;
-
-        testimonialLoadMoreWrap?.classList.remove("visible");
-        return;
-      }
-
-      testimonials = Array.isArray(data) ? data : [];
-
-      if (testimonials.length === 0) {
-        testimonialGrid.innerHTML = `
-          <div class="testimonial-state">
-            Testimonials coming soon.
-          </div>
-        `;
-
-        testimonialLoadMoreWrap?.classList.remove("visible");
-        return;
-      }
-
-      await Content.loadRoutes();
-      renderTestimonials();
-    }
-
-    function getTestimonialCover(item) {
-      const thumbnail = typeof item.thumbnail_url === "string" ? item.thumbnail_url.trim() : "";
-      const images = Array.isArray(item.image_urls) ? item.image_urls : [];
-      return thumbnail || images[0] || "";
-    }
-
-    function renderTestimonials() {
-      const visibleItems = testimonials.slice(0, visibleTestimonials);
-
-      testimonialGrid.innerHTML = visibleItems.map((item, index) => {
-        const cover = getTestimonialCover(item);
-        const excerpt = trimWords(item.article, 22);
-        const delay = (index % 3) * 80;
-
-        return `
-          <a
-            class="testimonial-post reveal in"
-            href="${escapeTestimonialHtml(Content.url("testimonial", item))}"
-            data-id="${escapeTestimonialHtml(item.id)}"
-            aria-label="Open ${escapeTestimonialHtml(item.title)}"
-            style="animation-delay:${delay}ms"
-          >
-            <div class="testimonial-media ${cover ? "" : "empty"}">
-              ${
-                cover
-                  ? `<img src="${escapeTestimonialHtml(cover)}" alt="${escapeTestimonialHtml(item.title)}" loading="lazy" decoding="async">`
-                  : `<span>P</span>`
-              }
-            </div>
-
-            <div class="testimonial-copy">
-              <span>Story</span>
-              <h3>${escapeTestimonialHtml(item.title)}</h3>
-              ${excerpt ? `<p>${escapeTestimonialHtml(excerpt)}</p>` : ""}
-              <strong>Read</strong>
-            </div>
-          </a>
-        `;
-      }).join("");
-
-      document.querySelectorAll(".testimonial-post").forEach(card => {
-        card.addEventListener("keydown", event => {
-          if (event.key === " ") { event.preventDefault(); card.click(); }
-        });
-      });
-
-      testimonialLoadMoreWrap?.classList.toggle(
-        "visible",
-        visibleTestimonials < testimonials.length
-      );
-    }
-
-    function trimWords(value, limit) {
-      const words = RichText.text(value).split(/\s+/).filter(Boolean);
-
-      if (words.length <= limit) {
-        return words.join(" ");
-      }
-
-      return words.slice(0, limit).join(" ") + "...";
-    }
-
-    function escapeTestimonialHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    testimonialLoadMore?.addEventListener("click", () => {
-      visibleTestimonials += TESTIMONIALS_PER_PAGE;
-      renderTestimonials();
-    });
-
-    loadTestimonials();
-  </script>
+  <script src="youtube.js"></script>
+  <script src="testimonials.js"></script>
 
 </body>
 </html>

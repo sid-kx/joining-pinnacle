@@ -79,8 +79,8 @@ test('slugify matches the supplied title and normalizes accents, quotes and punc
   assert.equal(Content.slugify('!!!'), 'post');
 });
 
-test('both tables allocate deterministic unique slugs and retain published slugs when titles change', async () => {
-  for (const table of ['education_videos', 'agent_testimonials']) {
+test('article table allocate deterministic unique slugs and retain published slugs when titles change', async () => {
+  for (const table of ['education_videos']) {
     const { Content } = setup(), db = mockDB();
     for (let n = 0; n < 3; n++) await Content.write(db, table, { title: 'My Title', article: 'Body' });
     assert.deepEqual(db.rows.map(r => r.slug), ['my-title', 'my-title-2', 'my-title-3']);
@@ -105,8 +105,6 @@ test('slug allocation retries a unique-index race and missing-column compatibili
 test('normal generated links contain slugs only, with readable pre-build compatibility links', async () => {
   const { Content } = setup(); await Content.loadRoutes();
   assert.equal(Content.url('article', { id: '9', slug: 'my-title' }), '/articles/my-title/');
-  assert.equal(Content.url('testimonial', { id: '9', slug: 'my-title' }), '/testimonials/my-title/');
-  assert.equal(Content.url('testimonial', { id: '9', slug: 'new-not-built' }), '/testimonial.html?slug=new-not-built');
   assert.equal(Content.url('article', { id: '9' }), '/article.html?id=9');
 });
 
@@ -155,8 +153,8 @@ test('legacy text remains escaped and excerpts/meta descriptions never include H
 
 const post = { id: '9', slug: 'my-title', title: 'My Title', article: '<!--pinnacle-rich-text:v1-->' + formatted, youtube_id: 'abcdefghijk', youtube_url: null, image_urls: ['https://example.com/gallery.jpg', 'https://example.com/second.jpg'], thumbnail_url: 'https://example.com/cover.jpg', created_at: '2026-09-11T00:00:00Z' };
 
-test('article and testimonial Shorts render standard embeds in static HTML and browser rendering', () => {
-  for (const kind of ['article', 'testimonial']) {
+test('article Shorts render standard embeds in static HTML and browser rendering', () => {
+  for (const kind of ['article']) {
     for (const url of [
       'https://youtube.com/shorts/abcdefghijk',
       'https://www.youtube.com/shorts/abcdefghijk',
@@ -185,8 +183,8 @@ test('article and testimonial Shorts render standard embeds in static HTML and b
   }
 });
 
-test('static article and testimonial HTML contains unique metadata and full sanitized content without JS', () => {
-  for (const kind of ['article', 'testimonial']) {
+test('static article HTML contains unique metadata and full sanitized content without JS', () => {
+  for (const kind of ['article']) {
     const page = renderPage(kind, post), doc = new JSDOM(page.html).window.document;
     assert.equal(doc.querySelector('#article-content').hidden, false);
     assert.equal(doc.querySelector('#article-title').textContent, 'My Title');
@@ -217,8 +215,8 @@ test('static JSON-LD and hydration data escape closing-script injection', () => 
   assert.equal(JSON.parse(doc.querySelector('#post-snapshot').textContent).title, '</script><script>alert(1)</script>');
 });
 
-test('both page types support optional media and carousel looping without using the thumbnail in the body', () => {
-  for (const kind of ['article', 'testimonial']) {
+test('article pages support optional media and carousel looping without using the thumbnail in the body', () => {
+  for (const kind of ['article']) {
     for (const [youtube, images] of [[true, 2], [false, 2], [true, 0], [false, 0], [false, 1], [false, 10]]) {
       const item = { ...post, youtube_id: youtube ? post.youtube_id : null, image_urls: Array.from({ length: images }, (_, n) => `https://example.com/${n}.jpg`) };
       const w = new JSDOM(fs.readFileSync(path.join(root, kind + '.html'), 'utf8'), { runScripts: 'outside-only', url: 'https://join.pinnaclerealty.ca/' }).window;
@@ -241,7 +239,7 @@ test('both page types support optional media and carousel looping without using 
 });
 
 test('slug page lookup uses slug and old ID links redirect to generated routes', async () => {
-  for (const kind of ['article', 'testimonial']) {
+  for (const kind of ['article']) {
     for (const legacy of [false, true]) {
       const w = new JSDOM(fs.readFileSync(path.join(root, kind + '.html'), 'utf8'), { runScripts: 'outside-only', url: `https://join.pinnaclerealty.ca/${kind}.html?${legacy ? 'id=9' : 'slug=my-title'}` }).window;
       windows.push(w); w.DOMPurify = require('dompurify')(w); w.db = mockDB([post]);
@@ -263,15 +261,16 @@ test('static build generates clean directories, route manifest and sitemap witho
     await build({ education_videos: [post], agent_testimonials: [{ ...post, slug: 'why-i-joined' }] }, output);
     verifySchedulingTree(output);
     assert(fs.existsSync(path.join(output, 'articles/my-title/index.html')));
-    assert(fs.existsSync(path.join(output, 'testimonials/why-i-joined/index.html')));
-    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(output, 'post-routes.json'))), ['/articles/my-title/', '/testimonials/why-i-joined/']);
+    assert(!fs.existsSync(path.join(output, 'testimonials')));
+    assert(!fs.existsSync(path.join(output, 'testimonial.html')));
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(output, 'post-routes.json'))), ['/articles/my-title/']);
     assert(!fs.existsSync(path.join(output, 'migrations'))); assert(!fs.existsSync(path.join(output, 'node_modules')));
-    assert.match(fs.readFileSync(path.join(output, 'sitemap.xml'), 'utf8'), /testimonials\/why-i-joined/);
+    assert.doesNotMatch(fs.readFileSync(path.join(output, 'sitemap.xml'), 'utf8'), /\/testimonials\//);
     for (const file of ['privacy.html', 'terms.html']) {
       assert(fs.existsSync(path.join(output, file)));
       assert(fs.readFileSync(path.join(output, 'sitemap.xml'), 'utf8').includes(`https://join.pinnaclerealty.ca/${file}`));
     }
-    for (const route of ['/articles/my-title/', '/testimonials/why-i-joined/']) {
+    for (const route of ['/articles/my-title/']) {
       const source = fs.readFileSync(path.join(output, route, 'index.html'), 'utf8');
       assert(verifySchedulingLinks(source) >= 3);
       const doc = new JSDOM(source, { url: `https://join.pinnaclerealty.ca${route}` }).window.document;
@@ -281,18 +280,18 @@ test('static build generates clean directories, route manifest and sitemap witho
 });
 
 test('all public templates use shared renderer assets and root-safe links', () => {
-  for (const template of ['article.html', 'testimonial.html']) {
+  for (const template of ['article.html']) {
     const html = fs.readFileSync(path.join(root, template), 'utf8');
     assert.match(html, /<base href="\/">/); assert.match(html, /rich-text.js/); assert.match(html, /vendor\/purify.min.js/);
   }
   const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  assert.match(index, /Content.url\("testimonial", item\)/); assert.doesNotMatch(index, /openTestimonial|testimonial-modal/);
+  assert.match(index, /src="testimonials.js"/); assert.doesNotMatch(index, /openTestimonial|testimonial-modal/);
   assert.match(fs.readFileSync(path.join(root, 'blog.html'), 'utf8'), /Content.url\("article", article\)/);
 });
 
-test('six public footers share the requested root-safe links; legal pages have static text and shared navigation', () => {
+test('five public footers share the requested root-safe links; legal pages have static text and shared navigation', () => {
   const expected = ['Home', 'Education', 'Schedule a Call', 'Privacy Policy', 'Terms of Service'];
-  for (const file of ['index.html', 'blog.html', 'article.html', 'testimonial.html', 'privacy.html', 'terms.html']) {
+  for (const file of ['index.html', 'blog.html', 'article.html', 'privacy.html', 'terms.html']) {
     const source = fs.readFileSync(path.join(root, file), 'utf8');
     const doc = new JSDOM(source).window.document;
     const links = [...doc.querySelectorAll('.footer-links a')];
@@ -310,13 +309,13 @@ test('six public footers share the requested root-safe links; legal pages have s
 
 test('scheduling destinations are replaced throughout source files and public links open safely in new tabs', () => {
   verifySchedulingTree(root, true);
-  for (const file of ['index.html', 'blog.html', 'article.html', 'testimonial.html', 'privacy.html', 'terms.html']) {
+  for (const file of ['index.html', 'blog.html', 'article.html', 'privacy.html', 'terms.html']) {
     assert(verifySchedulingLinks(fs.readFileSync(path.join(root, file), 'utf8')) >= 3);
   }
 });
 
 test('dark root styling loads before remote styles; mobile hero uses one portrait Mux player', () => {
-  for (const file of ['index.html', 'blog.html', 'article.html', 'testimonial.html', 'privacy.html', 'terms.html', 'admin.html', 'login.html']) {
+  for (const file of ['index.html', 'blog.html', 'article.html', 'privacy.html', 'terms.html', 'admin.html', 'login.html']) {
     const doc = new JSDOM(fs.readFileSync(path.join(root, file), 'utf8')).window.document;
     assert.equal(doc.querySelector('meta[name="theme-color"]').content, '#0b0d0f');
     assert.match(doc.querySelector('style').textContent, /html,body\{background:#0b0d0f\}/);
