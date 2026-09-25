@@ -182,6 +182,143 @@ test('public fetching requires only video columns and database failure has a cle
   assert(!gallery.state.hidden);
 });
 
+function mockYouTube(w) {
+  const players = [];
+  w.YT = { Player: function (iframe, options) {
+    this.events = options.events;
+    this.calls = [];
+    for (const method of ['unMute', 'mute', 'setVolume', 'playVideo']) this[method] = value => this.calls.push([method, value]);
+    this.destroy = () => { this.calls.push(['destroy']); iframe.remove(); };
+    players.push(this);
+  } };
+  return players;
+}
+
+test('mobile first tap immediately embeds autoplay and requests audible playback on YouTube readiness', async () => {
+  const { gallery, w, galleryRoot } = setup(true);
+  const players = mockYouTube(w);
+  gallery.setItems(rows(3));
+  assert.equal(players.length, 0);
+  assert.equal(galleryRoot.querySelectorAll('iframe').length, 0);
+  gallery.track.children[1].querySelector('button').click();
+  const iframe = galleryRoot.querySelector('iframe');
+  assert(iframe, 'iframe must be created synchronously in the first click');
+  const url = new URL(iframe.src);
+  assert.equal(url.pathname, '/embed/00000000003');
+  for (const [key, value] of Object.entries({autoplay:'1', playsinline:'1', rel:'0', enablejsapi:'1', origin:'https://join.pinnaclerealty.ca'})) assert.equal(url.searchParams.get(key), value);
+  assert(!url.searchParams.has('mute'));
+  assert.match(iframe.allow, /autoplay/);
+  await Promise.resolve();
+  players[0].events.onReady({target:players[0]});
+  assert.deepEqual(players[0].calls.map(x=>x[0]), ['unMute','setVolume','playVideo']);
+  assert.equal(galleryRoot.querySelectorAll('iframe').length, 1);
+  assert.equal(galleryRoot.querySelectorAll('.testimonial-swipe-zone').length, 2);
+  players[0].events.onAutoplayBlocked({target:players[0]});
+  players[0].events.onAutoplayBlocked({target:players[0]});
+  assert.deepEqual(players[0].calls.map(x=>x[0]), ['unMute','setVolume','playVideo','mute','playVideo']);
+  gallery.move(1);
+  assert(!iframe.isConnected);
+  assert.equal(players[0].calls.at(-1)[0], 'destroy');
+  const calls = players[0].calls.length;
+  players[0].events.onAutoplayBlocked({target:players[0]});
+  assert.equal(players[0].calls.length, calls, 'stale playback events cannot restart a removed video');
+});
+
+test('YouTube API loads only after a mobile click, once, and late readiness cannot resurrect an old slide', async () => {
+  const { gallery, w, galleryRoot } = setup(true);
+  gallery.setItems(rows(3));
+  const scripts = () => w.document.querySelectorAll('script[src="https://www.youtube.com/iframe_api"]');
+  assert.equal(scripts().length, 0);
+  gallery.track.children[1].querySelector('button').click();
+  assert.equal(scripts().length, 1);
+  gallery.move(1);
+  gallery.track.children[1].querySelector('button').click();
+  assert.equal(scripts().length, 1);
+  const players = mockYouTube(w);
+  w.onYouTubeIframeAPIReady();
+  await Promise.resolve();
+  assert.equal(players.length, 1);
+  assert.equal(galleryRoot.querySelectorAll('iframe').length, 1);
+  gallery.move(1);
+  players[0].events.onReady({target:players[0]});
+  assert(!players[0].calls.some(x=>x[0] === 'playVideo'));
+  assert.equal(galleryRoot.querySelectorAll('iframe').length, 0);
+});
+
+test('API failure leaves native controls available and does not affect desktop playback', async () => {
+  const { gallery, w, galleryRoot } = setup(true);
+  gallery.setItems(rows(1));
+  gallery.track.querySelector('button').click();
+  w.document.querySelector('script[src="https://www.youtube.com/iframe_api"]').dispatchEvent(new w.Event('error'));
+  await Promise.resolve();
+  assert.equal(galleryRoot.querySelectorAll('iframe').length, 1);
+  assert.equal(galleryRoot.querySelectorAll('.testimonial-swipe-zone').length, 0);
+  const desktop = setup();
+  desktop.gallery.setItems(rows(3));
+  desktop.gallery.grid.querySelector('button').click();
+  assert.equal(desktop.galleryRoot.querySelectorAll('.testimonial-swipe-zone').length, 0);
+  assert(!desktop.w.document.querySelector('script[src="https://www.youtube.com/iframe_api"]'));
+});
+
+test('edge swipes capture gestures over an active iframe, stop it, and wrap in both directions', () => {
+  const { gallery, w, galleryRoot } = setup(true);
+  gallery.setItems(rows(3));
+  const event = (target, type, x, y) => {
+    const e = new w.Event(type, {bubbles:true, cancelable:true});
+    Object.assign(e, {isPrimary:true, button:0, pointerId:4, clientX:x, clientY:y});
+    target.dispatchEvent(e);
+    return e;
+  };
+  for (const [dx, expected] of [[-80,1],[80,0],[80,2]]) {
+    gallery.track.children[1].querySelector('button').click();
+    const iframe = galleryRoot.querySelector('iframe');
+    const zone = galleryRoot.querySelector('.testimonial-swipe-zone');
+    let captured;
+    zone.setPointerCapture = id => {captured = id;};
+    event(zone,'pointerdown',100,100);
+    assert.equal(captured,4);
+    assert(event(zone,'pointermove',100+dx,105).defaultPrevented);
+    event(zone,'pointerup',100+dx,105);
+    assert.equal(gallery.index,expected);
+    assert(!iframe.isConnected);
+    assert.equal(gallery.track.children.length,3);
+    // A real subsequent tap is independent of the previous swipe's click suppression.
+    event(gallery.track,'pointerdown',100,100);
+    event(gallery.track,'pointerup',100,100);
+  }
+  gallery.track.children[1].querySelector('button').click();
+  const zone = galleryRoot.querySelector('.testimonial-swipe-zone');
+  event(zone,'pointerdown',100,100);
+  assert(!event(zone,'pointermove',103,125).defaultPrevented);
+  event(zone,'pointerup',30,130);
+  assert.equal(gallery.index,2, 'a gesture committed to vertical scrolling must not change slides');
+  assert.equal(galleryRoot.querySelectorAll('iframe').length,1);
+});
+
+test('sticky call link exists only on Home and Education with the correct new-tab destination', () => {
+  for (const file of ['index.html','blog.html','article.html','privacy.html','terms.html','login.html','admin.html']) {
+    const w = new JSDOM(fs.readFileSync(path.join(root,file),'utf8')).window;
+    windows.push(w);
+    const links = w.document.querySelectorAll('.mobile-call-cta');
+    const expected = ['index.html','blog.html'].includes(file);
+    assert.equal(links.length, expected ? 1 : 0, file);
+    assert.equal(w.document.body.classList.contains('has-mobile-call'), expected);
+    if (expected) {
+      assert.equal(links[0].tagName,'A');
+      assert.equal(links[0].textContent,'Schedule a Call');
+      assert.equal(links[0].href,'https://growwithpinnaclerealty.com/landingpage');
+      assert.equal(links[0].target,'_blank');
+      assert.equal(links[0].rel,'noopener noreferrer');
+    }
+  }
+  const css = fs.readFileSync(path.join(root,'style.css'),'utf8');
+  assert.match(css,/\.mobile-call-cta\{display:none\}/);
+  assert.match(css,/@media\(max-width:900px\)\{\s*\.has-mobile-call[\s\S]*?\.mobile-call-cta\{display:inline-flex;position:fixed/);
+  assert.match(css,/bottom:calc\(16px \+ env\(safe-area-inset-bottom,0px\)\)/);
+  assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\.mobile-call-cta\{animation:none\}\}/);
+  assert.match(css,/\.testimonial-swipe-zone\{position:absolute;top:60px;bottom:80px;width:32px/);
+});
+
 (async () => {
   try {
     for (const [name, run] of tests) { await run(); console.log(`PASS ${name}`); }

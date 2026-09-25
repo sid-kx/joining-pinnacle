@@ -2,6 +2,28 @@
   "use strict";
   const wrap = (index, count) => count ? ((index % count) + count) % count : 0;
   const swipeStep = (dx, dy) => Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy) * 1.3 ? (dx < 0 ? 1 : -1) : 0;
+  let youtubeApi;
+  function loadYouTubeApi() {
+    if (global.YT?.Player) return Promise.resolve(global.YT);
+    if (!youtubeApi) youtubeApi = new Promise((resolve, reject) => {
+      const previous = global.onYouTubeIframeAPIReady;
+      global.onYouTubeIframeAPIReady = () => {
+        resolve(global.YT);
+        if (typeof previous === "function") previous();
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.async = true;
+      script.onerror = () => {
+        script.remove();
+        youtubeApi = null;
+        global.onYouTubeIframeAPIReady = previous;
+        reject(new Error("YouTube playback controls could not load."));
+      };
+      document.head.append(script);
+    });
+    return youtubeApi;
+  }
 
   class Gallery {
     constructor(root) {
@@ -34,8 +56,23 @@
         this.move(event.key === "ArrowRight" ? 1 : -1);
       });
       this.track.addEventListener("pointerdown", event => {
-        if (!event.isPrimary || event.button !== 0 || this.items.length < 2 || this.moving) return;
+        if (!event.isPrimary || event.button !== 0) return;
+        this.suppressClick = false;
+        clearTimeout(this.clickTimer);
+        if (this.items.length < 2 || this.moving) return;
         this.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        // Capture only edge-zone gestures, never taps intended for the poster/player.
+        if (event.target.classList.contains("testimonial-swipe-zone")) event.target.setPointerCapture?.(event.pointerId);
+      });
+      this.track.addEventListener("pointermove", event => {
+        if (!this.pointer || this.pointer.id !== event.pointerId) return;
+        const dx = event.clientX - this.pointer.x;
+        const dy = event.clientY - this.pointer.y;
+        if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
+          this.pointer = null;
+          return;
+        }
+        if (swipeStep(dx, dy) && event.cancelable) event.preventDefault();
       });
       this.track.addEventListener("pointerup", event => {
         if (!this.pointer || this.pointer.id !== event.pointerId) return;
@@ -70,9 +107,37 @@
 
     stop() {
       if (!this.active) return;
-      const { card, post, index, preview } = this.active;
+      const { card, post, index, preview, player } = this.active;
       this.active = null;
+      // Removing the iframe stops playback even if the API is unavailable/not ready.
+      try { player?.destroy(); } catch { /* The DOM removal below is authoritative. */ }
       card.replaceWith(this.card(post, index, preview));
+    }
+
+    async startMobilePlayer(session, iframe) {
+      try {
+        const api = await loadYouTubeApi();
+        if (this.active !== session) return;
+        session.player = new api.Player(iframe, { events: {
+          onReady: event => {
+            if (this.active !== session) { event.target.destroy(); return; }
+            if (!session.mutedRetry) {
+              event.target.unMute();
+              event.target.setVolume(100);
+            }
+            event.target.playVideo();
+          },
+          onAutoplayBlocked: event => {
+            if (this.active !== session || session.mutedRetry) return;
+            session.mutedRetry = true;
+            // Mobile policies may refuse sound; retry playback once without it.
+            event.target.mute();
+            event.target.playVideo();
+          }
+        } });
+      } catch (error) {
+        console.warn("Testimonial playback request unavailable; native controls remain usable:", error);
+      }
     }
 
     card(post, index, preview = "") {
@@ -105,12 +170,24 @@
         const iframe = document.createElement("iframe");
         // Autoplay is requested only after a deliberate play click, never on page load.
         iframe.src = `https://www.youtube.com/embed/${post.youtube_id}?autoplay=1&playsinline=1&rel=0`;
+        if (this.media.matches) iframe.src += `&enablejsapi=1&origin=${encodeURIComponent(global.location.origin)}`;
         iframe.title = `Agent testimonial ${index + 1}`;
         iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
         iframe.allowFullscreen = true;
         iframe.referrerPolicy = "strict-origin-when-cross-origin";
         card.replaceChildren(iframe);
-        this.active = { card, post, index, preview };
+        const session = this.active = { card, post, index, preview };
+        if (this.media.matches) {
+          if (this.items.length > 1) {
+            for (const side of ["left", "right"]) {
+              const zone = document.createElement("div");
+              zone.className = `testimonial-swipe-zone testimonial-swipe-zone--${side}`;
+              zone.setAttribute("aria-hidden", "true");
+              card.append(zone);
+            }
+          }
+          this.startMobilePlayer(session, iframe);
+        }
         iframe.focus({ preventScroll: true });
       });
       card.append(play);
@@ -119,6 +196,7 @@
 
     render() {
       clearTimeout(this.timer);
+      this.pointer = null;
       this.moving = false;
       this.stop();
       this.track.classList.remove("moving-next", "moving-previous");

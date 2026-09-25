@@ -143,6 +143,9 @@ a,button,input,select,textarea{-webkit-tap-highlight-color:transparent}
 .testimonial-poster:hover .testimonial-play{background:var(--gold2)}
 .testimonial-poster:focus-visible{outline:3px solid var(--gold2);outline-offset:-5px}
 .testimonial-clip iframe{width:100%;height:100%;border:0;display:block}
+.testimonial-swipe-zone{position:absolute;top:60px;bottom:80px;width:32px;z-index:1;touch-action:pan-y;user-select:none}
+.testimonial-swipe-zone--left{left:0}
+.testimonial-swipe-zone--right{right:0}
 .testimonial-more-wrap{display:flex;justify-content:center;margin-top:32px}
 .testimonial-mobile{width:100%;min-width:0}
 .testimonial-track{display:grid;position:relative;overflow:hidden;touch-action:pan-y;isolation:isolate;padding:14px 0;outline-offset:-3px}
@@ -160,6 +163,14 @@ a,button,input,select,textarea{-webkit-tap-highlight-color:transparent}
 .testimonial-navigation button:hover{background:#ffffff12}
 .testimonial-navigation button:focus-visible,.testimonial-track:focus-visible{outline:2px solid var(--gold2)}
 @media(prefers-reduced-motion:reduce){.testimonial-track .testimonial-clip{transition:none}}
+.mobile-call-cta{display:none}
+@media(max-width:900px){
+  .has-mobile-call{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+  .mobile-call-cta{display:inline-flex;position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:90;min-height:48px;max-width:calc(100% - 32px);padding:14px 18px;letter-spacing:0;box-shadow:0 6px 24px #0005;animation:mobile-call-enter .55s cubic-bezier(.2,.7,.2,1) backwards}
+  .mobile-call-cta:focus-visible{outline:3px solid var(--gold2);outline-offset:4px}
+}
+@keyframes mobile-call-enter{from{opacity:0;transform:translate(12px,32px)}to{opacity:1;transform:translate(0,0)}}
+@media(prefers-reduced-motion:reduce){.mobile-call-cta{animation:none}}
 /* These media styles are shared by Article pages. */
 .testimonial-video{aspect-ratio:16/9;overflow:hidden;border-radius:8px;background:#000}
 .testimonial-video iframe{width:100%;height:100%;border:0;display:block}
