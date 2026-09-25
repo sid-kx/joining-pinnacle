@@ -88,7 +88,10 @@ function renderArticle(article) {
 function updateArticleMetadata(article, text, images) {
   // The static build runs this same renderer to include metadata in the initial HTML.
   const title = article.title || "Pinnacle Education";
-  const description = (text || title).replace(/\s+/g, " ").slice(0, 160);
+  const customDescription = typeof article.meta_description === "string"
+    ? article.meta_description.trim()
+    : "";
+  const description = (customDescription || (text || title).replace(/\s+/g, " ")).slice(0, 160);
   document.title = `${title} | Pinnacle Realty`;
   const meta = (attribute, key, value) => {
     let element = document.head.querySelector(`meta[${attribute}="${key}"]`);
@@ -144,7 +147,7 @@ async function loadArticle() {
     const table = "education_videos";
     if (slug && !(await Content.supportsSlugs(db, table))) throw new Error("Slug migration is not yet available.");
     const { data, error } = await Content.select(db, table,
-      "id,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at",
+      "id,title,article,meta_description,youtube_url,youtube_id,image_urls,thumbnail_url,created_at",
       query => query.eq(slug ? "slug" : "id", slug || id).maybeSingle());
     if (error) throw error;
     if (!data) {

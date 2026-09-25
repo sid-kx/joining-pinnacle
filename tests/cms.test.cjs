@@ -136,6 +136,68 @@ const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
 const writes = calls => calls.filter(call => ['insert', 'update', 'delete', 'upload', 'remove'].includes(call.action));
 
+test('Article meta description fields are optional plain text, capped at 160 with live counters', async () => {
+  const dom = new JSDOM(html);
+  for (const id of ['video-meta-description', 'edit-meta-description']) {
+    const field = dom.window.document.getElementById(id);
+    assert.equal(field.maxLength, 160);
+    assert.equal(field.required, false);
+    assert(!field.hasAttribute('data-rich-text'));
+    assert.equal(field.getAttribute('aria-describedby'), `${id}-count`);
+  }
+  dom.window.close();
+  const h = await setup();
+  for (const id of ['video-meta-description', 'edit-meta-description']) {
+    h.nodes[id].value = 'SEO text';
+    await h.nodes[id].dispatch('input');
+    assert.equal(h.nodes[`${id}-count`].textContent, '8 / 160');
+  }
+});
+
+test('Article publishing stores trimmed custom meta descriptions or null, never a generated fallback', async () => {
+  for (const [input, expected] of [['  Custom SEO description.  ', 'Custom SEO description.'], ['', null], [' \n\t ', null]]) {
+    const h = await setup();
+    h.nodes['video-title'].value = 'Article';
+    h.nodes['video-article'].value = 'Body stays independent of SEO.';
+    h.nodes['video-meta-description'].value = input;
+    await h.nodes['video-form'].dispatch('submit');
+    const row = h.rows.education_videos.find(row => row.id === 'new-post');
+    assert.equal(row.meta_description, expected);
+    assert.equal(row.article, 'Body stays independent of SEO.');
+    assert.equal(h.nodes['video-meta-description'].value, '');
+    assert.equal(h.nodes['video-meta-description-count'].textContent, '0 / 160');
+    assert(h.calls.some(call => call.action === 'read' && call.table === 'education_videos' && call.fields.split(',').includes('meta_description')));
+  }
+});
+
+test('Article edits load, preserve, change and clear descriptions without truncating long legacy drafts', async () => {
+  const h = await setup();
+  const row = h.rows.education_videos[0];
+  for (const value of [null, 'Existing SEO text', 'x'.repeat(190)]) {
+    row.meta_description = value;
+    await h.context.loadVideos();
+    h.context.openContentEditor('article', row.id);
+    assert.equal(h.nodes['edit-meta-description'].value, value || '');
+    assert.equal(h.nodes['edit-meta-description-count'].textContent, `${(value || '').length} / 160`);
+    await h.nodes['content-edit-form'].dispatch('submit');
+    assert.equal(row.meta_description, value);
+    assert.equal(row.article, 'Article text');
+  }
+  for (const [draft, expected] of [['  Changed description  ', 'Changed description'], ['', null], ['   ', null]]) {
+    h.context.openContentEditor('article', row.id);
+    h.nodes['edit-meta-description'].value = draft;
+    await h.nodes['content-edit-form'].dispatch('submit');
+    assert.equal(row.meta_description, expected);
+  }
+  h.context.openContentEditor('article', row.id);
+  h.nodes['edit-meta-description'].value = 'Unsaved description';
+  h.failures.update = true;
+  await h.nodes['content-edit-form'].dispatch('submit');
+  assert.equal(row.meta_description, null);
+  assert.equal(h.nodes['edit-meta-description'].value, 'Unsaved description');
+  assert(h.nodes['content-editor'].open);
+});
+
 test('shared YouTube parser accepts Shorts and legacy URLs with strict hosts, paths and IDs', async () => {
   const { context } = await setup();
   const valid = [

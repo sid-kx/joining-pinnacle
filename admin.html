@@ -93,6 +93,7 @@
       min-height:160px;
       resize:vertical;
     }
+    .content-form textarea.meta-description-input{min-height:96px}
 
     .content-form button{
       justify-self:start;
@@ -289,6 +290,12 @@
         </div>
 
         <div class="admin-field">
+          <label for="video-meta-description">Meta Description (Optional)</label>
+          <textarea id="video-meta-description" class="meta-description-input" rows="3" maxlength="160" aria-describedby="video-meta-description-count" placeholder="Optional SEO description. If left blank, the first 160 characters of the article will be used."></textarea>
+          <small id="video-meta-description-count">0 / 160</small>
+        </div>
+
+        <div class="admin-field">
           <label for="youtube-url">YouTube link</label>
           <input
             id="youtube-url"
@@ -391,6 +398,11 @@
         <div class="admin-field">
           <label for="edit-article">Article</label>
           <textarea data-rich-text id="edit-article"></textarea>
+        </div>
+        <div class="admin-field">
+          <label for="edit-meta-description">Meta Description (Optional)</label>
+          <textarea id="edit-meta-description" class="meta-description-input" rows="3" maxlength="160" aria-describedby="edit-meta-description-count" placeholder="Optional SEO description. If left blank, the first 160 characters of the article will be used."></textarea>
+          <small id="edit-meta-description-count">0 / 160</small>
         </div>
         <div class="admin-field">
           <label for="edit-youtube-url">YouTube link</label>

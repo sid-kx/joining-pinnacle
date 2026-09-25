@@ -2,6 +2,7 @@ const form = document.getElementById("video-form");
 const urlInput = document.getElementById("youtube-url");
 const videoTitle = document.getElementById("video-title");
 const videoArticle = document.getElementById("video-article");
+const videoMetaDescription = document.getElementById("video-meta-description");
 const videoImages = document.getElementById("video-images");
 const videoThumbnail = document.getElementById("video-thumbnail");
 const messageBox = document.getElementById("admin-message");
@@ -78,7 +79,7 @@ async function loadVideos() {
   const {
     data: videos,
     error
-  } = await Content.select(db, "education_videos", "id,youtube_id,youtube_url,title,article,image_urls,thumbnail_url,created_at", query => query.order("created_at", { ascending: false }));
+  } = await Content.select(db, "education_videos", "id,youtube_id,youtube_url,title,article,meta_description,image_urls,thumbnail_url,created_at", query => query.order("created_at", { ascending: false }));
 
   if (error) {
     console.error("Video load error:", error);
@@ -179,6 +180,7 @@ function getVideoContentDraft() {
   return {
     title: videoTitle.value.trim(),
     article: RichText.read(videoArticle),
+    meta_description: videoMetaDescription.value.trim() || null,
     youtube_url: youtubeUrl || null,
     youtube_id: extractYoutubeId(youtubeUrl) || null,
     images: Array.from(videoImages.files || []),
@@ -238,6 +240,7 @@ async function handleVideoSubmit(event) {
     const { data, error } = await Content.write(db, "education_videos", {
         title: draft.title,
         article: draft.article || null,
+        meta_description: draft.meta_description,
         youtube_url: draft.youtube_url,
         youtube_id: draft.youtube_id,
         image_urls: imageUrls,
@@ -270,6 +273,7 @@ async function handleVideoSubmit(event) {
 
   messageBox.textContent = `Article published successfully. Database ID: ${publishedId}`;
   form.reset();
+  updateMetaDescriptionCount(videoMetaDescription, "video-meta-description-count");
   const rebuild = requestSiteRebuild(messageBox);
   try {
     await loadVideos();
@@ -560,12 +564,19 @@ const editForm = document.getElementById("content-edit-form");
 const editFields = document.getElementById("edit-fields");
 const editTitle = document.getElementById("edit-title");
 const editArticle = document.getElementById("edit-article");
+const editMetaDescription = document.getElementById("edit-meta-description");
 const editYoutube = document.getElementById("edit-youtube-url");
 const editThumbnail = document.getElementById("edit-thumbnail");
 const editImages = document.getElementById("edit-images");
 const editMessage = document.getElementById("edit-message");
 let contentEditState = null;
 let editPreviewUrls = [];
+
+function updateMetaDescriptionCount(input, counterId) {
+  document.getElementById(counterId).textContent = `${input.value.length} / 160`;
+}
+videoMetaDescription.addEventListener("input", () => updateMetaDescriptionCount(videoMetaDescription, "video-meta-description-count"));
+editMetaDescription.addEventListener("input", () => updateMetaDescriptionCount(editMetaDescription, "edit-meta-description-count"));
 
 function attachEditButtons(container) {
   container.querySelectorAll(".edit-post").forEach(button => {
@@ -585,6 +596,8 @@ function openContentEditor(kind, id) {
   editFields.disabled = false;
   editTitle.value = post.title || "";
   RichText.set(editArticle, post.article || "");
+  editMetaDescription.value = typeof post.meta_description === "string" ? post.meta_description : "";
+  updateMetaDescriptionCount(editMetaDescription, "edit-meta-description-count");
   editYoutube.value = post.youtube_url || (post.youtube_id ? `https://www.youtube.com/watch?v=${encodeURIComponent(post.youtube_id)}` : "");
   document.getElementById("edit-heading").textContent = "Edit Article";
   editArticle.required = false;
@@ -657,6 +670,7 @@ function closeContentEditor() {
   contentEditState = null;
   editForm.reset();
   contentEditor.close();
+  updateMetaDescriptionCount(editMetaDescription, "edit-meta-description-count");
 }
 
 editThumbnail.addEventListener("change", () => {
@@ -709,6 +723,7 @@ async function persistArticleEdit(original, draft) {
     imageUrls = [...draft.retainedImages, ...added];
     const { data, error } = await Content.write(db, "education_videos", {
         title: draft.title, article: draft.article || null,
+        meta_description: draft.meta_description,
         youtube_url: draft.youtube_url || null, youtube_id: draft.youtube_id || null,
         image_urls: imageUrls, thumbnail_url: thumbnailUrl
       }, original);
@@ -741,6 +756,7 @@ async function saveContentEdits(event) {
   const youtubeUrl = editYoutube.value.trim();
   const draft = {
     title: editTitle.value.trim(), article: RichText.read(editArticle),
+    meta_description: editMetaDescription.value.trim() || null,
     youtube_url: youtubeUrl, youtube_id: extractYoutubeId(youtubeUrl),
     retainedImages: [...state.retainedImages], newImages: [...state.newImages],
     thumbnails: Array.from(editThumbnail.files || []), thumbnailMode: state.thumbnailMode

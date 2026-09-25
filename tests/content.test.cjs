@@ -215,6 +215,89 @@ test('static JSON-LD and hydration data escape closing-script injection', () => 
   assert.equal(JSON.parse(doc.querySelector('#post-snapshot').textContent).title, '</script><script>alert(1)</script>');
 });
 
+test('custom and fallback descriptions agree across static and client SEO metadata without changing the body', () => {
+  const body = '<!--pinnacle-rich-text:v1--><p>Article <strong>body</strong> ' + 'words '.repeat(45) + '</p>';
+  const baseline = renderPage('article', { ...post, article: body });
+  const baseWindow = new JSDOM(baseline.html).window;
+  windows.push(baseWindow);
+  const originalBody = baseWindow.document.querySelector('#article-body').innerHTML;
+  const fallback = baseWindow.document.querySelector('meta[name="description"]').content;
+  assert.equal(fallback.length, 160);
+  assert(!fallback.includes('<'));
+  for (const [custom, expected] of [
+    ['Learn how Pinnacle Realty helps Ontario agents scale their business.', 'Learn how Pinnacle Realty helps Ontario agents scale their business.'],
+    ['  Custom description with  spacing.  ', 'Custom description with  spacing.'],
+    [null, fallback], [undefined, fallback], ['', fallback], [' \n\t ', fallback],
+    ['x'.repeat(200), 'x'.repeat(160)],
+    ['</script><script>alert(1)</script>', '</script><script>alert(1)</script>']
+  ]) {
+    const item = { ...post, article: body, meta_description: custom };
+    const staticWindow = new JSDOM(renderPage('article', item).html).window;
+    const clientWindow = new JSDOM(fs.readFileSync(path.join(root, 'article.html'), 'utf8'), { runScripts: 'outside-only', url:'https://join.pinnaclerealty.ca/articles/my-title/' }).window;
+    windows.push(staticWindow, clientWindow);
+    clientWindow.DOMPurify = require('dompurify')(clientWindow);
+    clientWindow.__BUILD_POST__ = item;
+    for (const file of ['rich-text.js', 'content.js', 'article.js']) clientWindow.eval(fs.readFileSync(path.join(root, file), 'utf8'));
+    for (const w of [staticWindow, clientWindow]) {
+      const doc = w.document;
+      assert.equal(doc.querySelector('meta[name="description"]').content, expected);
+      assert.equal(doc.querySelector('meta[property="og:description"]').content, expected);
+      assert.equal(JSON.parse(doc.querySelector('#article-structured-data').textContent).description, expected);
+      assert.equal(doc.querySelector('#article-body').innerHTML, originalBody);
+      assert.equal(doc.querySelector('#article-title').textContent, post.title);
+      assert(![...doc.querySelectorAll('script')].some(script => script.textContent === 'alert(1)'));
+    }
+    assert.equal(JSON.parse(staticWindow.document.querySelector('#post-snapshot').textContent).meta_description, custom);
+  }
+  const titleWindow = new JSDOM(renderPage('article', { ...post, title:'Long title '.repeat(30), article:null, meta_description:'   ' }).html).window;
+  windows.push(titleWindow);
+  assert.equal(titleWindow.document.querySelector('meta[name="description"]').content, 'Long title '.repeat(30).slice(0,160));
+});
+
+test('static build selects meta_description and includes it in initial HTML and snapshots', async () => {
+  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'pinnacle-meta-build-'));
+  const previousFetch = global.fetch;
+  const item = { ...post, meta_description:'Custom description in initial HTML.' };
+  let fetched = false;
+  global.fetch = async url => {
+    const request = new URL(url);
+    assert.equal(request.pathname, '/rest/v1/education_videos');
+    assert(request.searchParams.get('select').split(',').includes('meta_description'));
+    fetched = true;
+    return { ok:true, json:async () => [item] };
+  };
+  try {
+    await build(undefined, output);
+    assert(fetched);
+    const w = new JSDOM(fs.readFileSync(path.join(output, 'articles/my-title/index.html'), 'utf8')).window;
+    windows.push(w);
+    assert.equal(w.document.querySelector('meta[name="description"]').content, item.meta_description);
+    assert.equal(JSON.parse(w.document.querySelector('#post-snapshot').textContent).meta_description, item.meta_description);
+  } finally {
+    global.fetch = previousFetch;
+    fs.rmSync(output, {recursive:true, force:true});
+  }
+});
+
+test('a missing meta_description column fails the build without replacing existing output', async () => {
+  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'pinnacle-meta-missing-'));
+  const previousFetch = global.fetch;
+  fs.writeFileSync(path.join(output, 'keep.txt'), 'Previous build');
+  global.fetch = async () => ({ok:false, text:async () => JSON.stringify({code:'42703', message:'column education_videos.meta_description does not exist'})});
+  try {
+    await assert.rejects(build(undefined, output), error => {
+      assert.match(error.message, /meta_description does not exist/);
+      assert.match(error.message, /configured Supabase project/);
+      assert.doesNotMatch(error.message, /001_content_slugs/);
+      return true;
+    });
+    assert.equal(fs.readFileSync(path.join(output, 'keep.txt'), 'utf8'), 'Previous build');
+  } finally {
+    global.fetch = previousFetch;
+    fs.rmSync(output, {recursive:true, force:true});
+  }
+});
+
 test('article pages support optional media and carousel looping without using the thumbnail in the body', () => {
   for (const kind of ['article']) {
     for (const [youtube, images] of [[true, 2], [false, 2], [true, 0], [false, 0], [false, 1], [false, 10]]) {
@@ -248,6 +331,7 @@ test('slug page lookup uses slug and old ID links redirect to generated routes',
       // JSDOM cannot navigate; replace only the navigation sink to inspect its target.
       const code = fs.readFileSync(path.join(root, 'article.js'), 'utf8').replace('window.location.replace(target)', 'window.redirectTarget = target').replace(/loadArticle\(\);\s*$/, '');
       w.eval(code); await w.loadArticle();
+      assert(w.db.calls.some(call => call.fields?.split(',').includes('meta_description')));
       assert(w.db.calls.some(call => call.key === (legacy ? 'id' : 'slug') && call.value === (legacy ? '9' : 'my-title')));
       if (legacy) assert.equal(w.redirectTarget, `/${kind === 'article' ? 'articles' : 'testimonials'}/my-title/`);
       else assert.equal(w.document.querySelector('#article-title').textContent, post.title);

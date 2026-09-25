@@ -3,7 +3,7 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 const createDOMPurify = require('dompurify');
 const root = path.resolve(__dirname, '..');
-const fields = 'id,slug,title,article,youtube_url,youtube_id,image_urls,thumbnail_url,created_at';
+const fields = 'id,slug,title,article,meta_description,youtube_url,youtube_id,image_urls,thumbnail_url,created_at';
 
 function renderPage(kind, post) {
   if (kind !== 'article') throw new Error('Only articles have static pages.');
@@ -37,7 +37,7 @@ async function readPosts(table) {
   const rows = [];
   for (let offset = 0; ; offset += 500) {
     const response = await fetch(`${url}/rest/v1/${table}?select=${fields}&order=id&limit=500&offset=${offset}`, { headers: { apikey: key } });
-    if (!response.ok) throw new Error(`Cannot build ${table}: ${await response.text()}. Run migrations/001_content_slugs.sql manually first.`);
+    if (!response.ok) throw new Error(`Cannot build ${table}: ${await response.text()}. Verify the selected columns exist in the configured Supabase project before rebuilding.`);
     const page = await response.json(); rows.push(...page);
     if (page.length < 500) break;
   }
