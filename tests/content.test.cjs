@@ -358,6 +358,7 @@ test('static build generates clean directories, route manifest and sitemap witho
       const source = fs.readFileSync(path.join(output, route, 'index.html'), 'utf8');
       assert(verifySchedulingLinks(source) >= 3);
       const doc = new JSDOM(source, { url: `https://join.pinnaclerealty.ca${route}` }).window.document;
+      assert.equal(doc.querySelector('.footer-brand').textContent.trim(), 'Pinnacle Realty, Brokerage');
       for (const file of ['privacy.html', 'terms.html']) assert.equal(doc.querySelector(`.footer-links a[href="/${file}"]`).href, `https://join.pinnaclerealty.ca/${file}`);
     }
   } finally { fs.rmSync(output, { recursive: true, force: true }); }
@@ -379,6 +380,9 @@ test('five public footers share the requested root-safe links; legal pages have 
     const source = fs.readFileSync(path.join(root, file), 'utf8');
     const doc = new JSDOM(source).window.document;
     const links = [...doc.querySelectorAll('.footer-links a')];
+    assert.equal(doc.querySelector('.footer-brand').textContent.trim(), 'Pinnacle Realty, Brokerage');
+    assert.equal(doc.querySelector('.footer-brand').children.length, 0);
+    assert(!source.includes('A modern brokerage platform for ambitious real estate professionals.'));
     assert.deepEqual(links.map(a => a.textContent.trim()), expected);
     assert.deepEqual(links.map(a => a.getAttribute('href')), ['/index.html', '/blog.html', 'https://growwithpinnaclerealty.com/landingpage', '/privacy.html', '/terms.html']);
     if (['privacy.html', 'terms.html'].includes(file)) {
@@ -389,6 +393,22 @@ test('five public footers share the requested root-safe links; legal pages have 
       assert(!doc.querySelector('script[src="supabase.js"]'));
     }
   }
+});
+
+test('homepage strips and their dedicated styles are removed without empty layout wrappers', () => {
+  const source = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const doc = new JSDOM(source).window.document;
+  assert.equal(doc.querySelectorAll('.ticker-wrap,.ticker,.credibility-bar').length, 0);
+  for (const text of ['SMARTER TECHNOLOGY', 'TRAINING THAT MOVES WITH YOU', 'MARKETING SUPPORT', 'AGENT COMMUNITY', 'STRONGER PERSONAL BRAND', 'Ontario REALTORS\u00ae']) assert(!source.includes(text));
+  assert.equal(doc.querySelector('.hero').children.length, 1);
+  assert(doc.querySelector('.hero').lastElementChild.matches('.hero-grid'));
+  assert.equal(doc.querySelector('.hero').nextElementSibling.id, 'testimonials');
+  assert(doc.querySelector('.stat-grid').parentElement.lastElementChild.matches('.stat-grid'));
+  assert(doc.querySelector('.footer-bottom').textContent.includes('Built for agent growth.'));
+  const css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  assert.doesNotMatch(css, /ticker|credibility-bar|\.footer-brand p\s*\{/);
+  assert.match(css, /@keyframes pulse/);
+  assert.match(css, /@keyframes mobile-call-enter/);
 });
 
 test('scheduling destinations are replaced throughout source files and public links open safely in new tabs', () => {
