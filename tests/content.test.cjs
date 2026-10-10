@@ -9,6 +9,21 @@ const root = path.resolve(__dirname, '..');
 const schedulingUrl = 'https://growwithpinnaclerealty.com/landingpage';
 const retiredSchedulingUrl = ['https://calendly.com', 'jag-pinnaclerealty'].join('/');
 
+function verifyHomepageLinks(source, url = 'https://join.pinnaclerealty.ca/') {
+  const dom = new JSDOM(source, { url });
+  try {
+    for (const link of dom.window.document.querySelectorAll('a[href]')) {
+      const destination = new URL(link.href);
+      if (destination.origin === 'https://join.pinnaclerealty.ca') {
+        assert.notEqual(destination.pathname, '/index.html', `Old homepage link: ${link.outerHTML}`);
+      }
+      if (link.matches('.brand') || /^(?:\u2190\s*)?(?:Home|Return to Home)$/.test(link.textContent.trim())) {
+        assert.equal(link.getAttribute('href'), '/', `Homepage link must be root-safe: ${link.outerHTML}`);
+      }
+    }
+  } finally { dom.window.close(); }
+}
+
 function verifySchedulingLinks(source) {
   assert(!source.includes(retiredSchedulingUrl));
   const dom = new JSDOM(source);
@@ -344,6 +359,14 @@ test('static build generates clean directories, route manifest and sitemap witho
   try {
     await build({ education_videos: [post], agent_testimonials: [{ ...post, slug: 'why-i-joined' }] }, output);
     verifySchedulingTree(output);
+    for (const file of fs.readdirSync(output).filter(file => file.endsWith('.html'))) {
+      verifyHomepageLinks(fs.readFileSync(path.join(output, file), 'utf8'));
+    }
+    const sitemap = new JSDOM(fs.readFileSync(path.join(output, 'sitemap.xml'), 'utf8'), { contentType: 'application/xml' });
+    const locations = [...sitemap.window.document.querySelectorAll('loc')].map(node => node.textContent);
+    assert.deepEqual(locations, ['https://join.pinnaclerealty.ca/', 'https://join.pinnaclerealty.ca/blog.html', 'https://join.pinnaclerealty.ca/privacy.html', 'https://join.pinnaclerealty.ca/terms.html', 'https://join.pinnaclerealty.ca/articles/my-title/']);
+    assert(!locations.some(url => new URL(url).pathname === '/index.html'));
+    sitemap.window.close();
     assert(fs.existsSync(path.join(output, 'articles/my-title/index.html')));
     assert(!fs.existsSync(path.join(output, 'testimonials')));
     assert(!fs.existsSync(path.join(output, 'testimonial.html')));
@@ -356,12 +379,59 @@ test('static build generates clean directories, route manifest and sitemap witho
     }
     for (const route of ['/articles/my-title/']) {
       const source = fs.readFileSync(path.join(output, route, 'index.html'), 'utf8');
+      verifyHomepageLinks(source, `https://join.pinnaclerealty.ca${route}`);
       assert(verifySchedulingLinks(source) >= 3);
       const doc = new JSDOM(source, { url: `https://join.pinnaclerealty.ca${route}` }).window.document;
+      assert.equal(doc.querySelector('link[rel="canonical"]').href, `https://join.pinnaclerealty.ca${route}`);
       assert.equal(doc.querySelector('.footer-brand').textContent.trim(), 'Pinnacle Realty, Brokerage');
       for (const file of ['privacy.html', 'terms.html']) assert.equal(doc.querySelector(`.footer-links a[href="/${file}"]`).href, `https://join.pinnaclerealty.ca/${file}`);
     }
   } finally { fs.rmSync(output, { recursive: true, force: true }); }
+});
+
+test('homepage has exactly one root canonical and no conflicting homepage SEO URLs', () => {
+  const dom = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'));
+  const doc = dom.window.document;
+  const canonicals = doc.querySelectorAll('link[rel="canonical"]');
+  assert.equal(canonicals.length, 1);
+  assert.equal(canonicals[0].getAttribute('href'), 'https://join.pinnaclerealty.ca/');
+  for (const meta of doc.querySelectorAll('meta[property="og:url"]')) assert.equal(meta.content, 'https://join.pinnaclerealty.ca/');
+  dom.window.close();
+});
+
+test('all source HTML uses root-safe Home, logo and Return to Home navigation', () => {
+  for (const file of fs.readdirSync(root).filter(file => file.endsWith('.html'))) {
+    verifyHomepageLinks(fs.readFileSync(path.join(root, file), 'utf8'), `https://join.pinnaclerealty.ca/${file}`);
+  }
+});
+
+test('early homepage redirect only normalizes exact /index.html, preserves query/hash and cannot loop', () => {
+  const dom = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'));
+  const script = dom.window.document.getElementById('homepage-url-normalization');
+  assert.equal(dom.window.document.querySelector('script'), script);
+  assert.equal(script.parentElement.tagName, 'HEAD');
+  for (const [input, expected] of [
+    ['/index.html', '/'],
+    ['/index.html?utm_source=x#section', '/?utm_source=x#section'],
+    ['/index.html?next=https%3A%2F%2Fexample.com&x=a%20b#agent%20stories', '/?next=https%3A%2F%2Fexample.com&x=a%20b#agent%20stories'],
+    ['/index.html#testimonials', '/#testimonials'],
+    ['/index.html?utm_source=x', '/?utm_source=x'],
+    ['/', null], ['/?utm_source=x#section', null], ['/blog.html', null],
+    ['/articles/my-title/', null], ['/articles/my-title/index.html', null], ['/index.html/', null]
+  ]) {
+    const calls = [];
+    const run = destination => {
+      const url = new URL(destination, 'https://join.pinnaclerealty.ca');
+      vm.runInNewContext(script.textContent, { window: { location: {
+        pathname: url.pathname, search: url.search, hash: url.hash,
+        replace(target) { calls.push(target); }
+      } } });
+    };
+    run(input);
+    assert.deepEqual(calls, expected ? [expected] : []);
+    if (expected) { run(expected); assert.deepEqual(calls, [expected]); }
+  }
+  dom.window.close();
 });
 
 test('all public templates use shared renderer assets and root-safe links', () => {
@@ -384,10 +454,10 @@ test('five public footers share the requested root-safe links; legal pages have 
     assert.equal(doc.querySelector('.footer-brand').children.length, 0);
     assert(!source.includes('A modern brokerage platform for ambitious real estate professionals.'));
     assert.deepEqual(links.map(a => a.textContent.trim()), expected);
-    assert.deepEqual(links.map(a => a.getAttribute('href')), ['/index.html', '/blog.html', 'https://growwithpinnaclerealty.com/landingpage', '/privacy.html', '/terms.html']);
+    assert.deepEqual(links.map(a => a.getAttribute('href')), ['/', '/blog.html', 'https://growwithpinnaclerealty.com/landingpage', '/privacy.html', '/terms.html']);
     if (['privacy.html', 'terms.html'].includes(file)) {
       assert(doc.querySelector('.site-header .menu-btn')); assert(doc.querySelector('.mobile-menu'));
-      assert.equal(doc.querySelector('.article-back').getAttribute('href'), '/index.html');
+      assert.equal(doc.querySelector('.article-back').getAttribute('href'), '/');
       assert(doc.querySelectorAll('.legal-body h2').length >= 13);
       assert.match(source, /legal counsel should review/);
       assert(!doc.querySelector('script[src="supabase.js"]'));

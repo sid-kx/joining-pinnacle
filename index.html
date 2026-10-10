@@ -3,6 +3,12 @@
 
 <head>
   <meta charset="UTF-8">
+  <link rel="canonical" href="https://join.pinnaclerealty.ca/">
+  <script id="homepage-url-normalization">
+    if (window.location.pathname === "/index.html") {
+      window.location.replace("/" + window.location.search + window.location.hash);
+    }
+  </script>
   <meta name="theme-color" content="#0b0d0f">
   <style>html,body{background:#0b0d0f}</style>
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -65,7 +71,7 @@
 
     <div class="container nav-wrap">
 
-      <a class="brand" href="index.html">
+      <a class="brand" href="/">
 
         <span class="brand-mark">
           <svg viewBox="0 0 64 64">
@@ -90,7 +96,7 @@
 
         <a
           class="active"
-          href="index.html"
+          href="/"
         >
           Home
         </a>
@@ -130,7 +136,7 @@
       aria-hidden="true"
     >
 
-      <a href="index.html">
+      <a href="/">
         Home
       </a>
 
@@ -430,7 +436,7 @@
 
 
       <div class="footer-links">
-        <a href="/index.html">Home</a>
+        <a href="/">Home</a>
         <a href="/blog.html">Education</a>
         <a href="https://growwithpinnaclerealty.com/landingpage" target="_blank" rel="noopener noreferrer">Schedule a Call</a>
         <a href="/privacy.html">Privacy Policy</a>
