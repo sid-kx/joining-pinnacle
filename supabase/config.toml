@@ -3,3 +3,9 @@ project_id = "joining-pinnacle"
 [functions.rebuild-site]
 verify_jwt = true
 entrypoint = "./functions/rebuild-site/index.ts"
+
+[functions.meta-capi]
+# Public endpoint: called anonymously by the join site. Origin, event names and
+# URL are validated in the handler; the Meta token stays in Edge secrets.
+verify_jwt = false
+entrypoint = "./functions/meta-capi/index.ts"
