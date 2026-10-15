@@ -27,6 +27,16 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
   <link rel="stylesheet" href="style.css">
+  <!-- Meta Pixel: Join Pinnacle (1010609811725803) -->
+  <script id="meta-pixel">
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1010609811725803');
+    fbq('track', 'PageView');
+  </script>
 </head>
 <body class="legal-page">
   <div class="noise"></div>
@@ -242,5 +252,23 @@
 
   </footer>
   <script src="script.js"></script>
+  <!-- Meta Pixel: track clicks to the booking page and carry ad/UTM parameters across -->
+  <script id="meta-pixel-booking-clicks">
+    (function () {
+      var bookingHost = "growwithpinnaclerealty.com";
+      var carried = ["fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+      var params = new URLSearchParams(window.location.search);
+      document.addEventListener("click", function (event) {
+        var link = event.target.closest ? event.target.closest("a[href]") : null;
+        if (!link || link.hostname !== bookingHost) return;
+        var url = new URL(link.href);
+        carried.forEach(function (key) {
+          if (params.has(key) && !url.searchParams.has(key)) url.searchParams.set(key, params.get(key));
+        });
+        link.href = url.toString();
+        if (window.fbq) window.fbq("trackCustom", "ClickToBook", { page: window.location.pathname });
+      }, true);
+    })();
+  </script>
 </body>
 </html>
