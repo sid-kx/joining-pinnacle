@@ -46,7 +46,8 @@
     t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
     document,'script','https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', '1010609811725803');
-    fbq('track', 'PageView');
+    window.__metaPageViewId = "pv_" + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now() + "_" + Math.random().toString(36).slice(2));
+    fbq('track', 'PageView', {}, { eventID: window.__metaPageViewId });
   </script>
 </head>
 
@@ -478,12 +479,40 @@
   <script src="youtube.js"></script>
   <script src="testimonials.js"></script>
 
-  <!-- Meta Pixel: track clicks to the booking page and carry ad/UTM parameters across -->
+  <!-- Meta Pixel + Conversions API: page views and booking clicks, shared event IDs for de-duplication -->
   <script id="meta-pixel-booking-clicks">
     (function () {
       var bookingHost = "growwithpinnaclerealty.com";
+      var capiUrl = "https://daxrirnhbcfpqzswjofl.supabase.co/functions/v1/meta-capi";
       var carried = ["fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
       var params = new URLSearchParams(window.location.search);
+      function cookie(name) {
+        var match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+        return match ? decodeURIComponent(match[1]) : undefined;
+      }
+      function newId(prefix) {
+        return prefix + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now() + "_" + Math.random().toString(36).slice(2));
+      }
+      function sendToServer(eventName, eventId, extra) {
+        var fbc = cookie("_fbc");
+        if (!fbc && params.get("fbclid")) fbc = "fb.1." + Date.now() + "." + params.get("fbclid");
+        var body = JSON.stringify(Object.assign({
+          event_name: eventName,
+          event_id: eventId,
+          event_source_url: window.location.href,
+          fbp: cookie("_fbp"),
+          fbc: fbc
+        }, extra || {}));
+        try {
+          if (navigator.sendBeacon && navigator.sendBeacon(capiUrl, new Blob([body], { type: "text/plain" }))) return;
+          fetch(capiUrl, { method: "POST", body: body, keepalive: true, headers: { "Content-Type": "text/plain" } }).catch(function () {});
+        } catch (error) {}
+      }
+      function sendPageView() {
+        if (window.__metaPageViewId) setTimeout(function () { sendToServer("PageView", window.__metaPageViewId); }, 1500);
+      }
+      if (document.readyState === "complete") sendPageView();
+      else window.addEventListener("load", sendPageView, { once: true });
       document.addEventListener("click", function (event) {
         var link = event.target.closest ? event.target.closest("a[href]") : null;
         if (!link || link.hostname !== bookingHost) return;
@@ -492,7 +521,10 @@
           if (params.has(key) && !url.searchParams.has(key)) url.searchParams.set(key, params.get(key));
         });
         link.href = url.toString();
-        if (window.fbq) window.fbq("trackCustom", "ClickToBook", { page: window.location.pathname });
+        var clickId = newId("ctb_");
+        var page = window.location.pathname;
+        if (window.fbq) window.fbq("trackCustom", "ClickToBook", { page: page }, { eventID: clickId });
+        sendToServer("ClickToBook", clickId, { page: page });
       }, true);
     })();
   </script>
