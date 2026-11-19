@@ -92,7 +92,9 @@ function updateArticleMetadata(article, text, images) {
     ? article.meta_description.trim()
     : "";
   const description = (customDescription || (text || title).replace(/\s+/g, " ")).slice(0, 160);
-  document.title = `${title} | Pinnacle Realty`;
+  // Search results cut titles off at roughly 60 characters, so the brand suffix is only added when it fits.
+  const brandedTitle = `${title} | Pinnacle Realty`;
+  document.title = brandedTitle.length <= 60 ? brandedTitle : title;
   const meta = (attribute, key, value) => {
     let element = document.head.querySelector(`meta[${attribute}="${key}"]`);
     if (!element) {
@@ -106,8 +108,14 @@ function updateArticleMetadata(article, text, images) {
   meta("property", "og:title", title);
   meta("property", "og:description", description);
   meta("property", "og:type", "article");
+  meta("property", "og:site_name", "Pinnacle Realty, Brokerage");
   const cover = article.thumbnail_url || images[0];
-  if (cover) meta("property", "og:image", cover);
+  const shareImage = cover || `${Content.origin}/og-default.png`;
+  meta("property", "og:image", shareImage);
+  meta("name", "twitter:card", "summary_large_image");
+  meta("name", "twitter:title", title);
+  meta("name", "twitter:description", description);
+  meta("name", "twitter:image", shareImage);
 
   const url = Content.validSlug(article.slug) ? Content.origin + Content.path(pageKind, article.slug) : null;
   if (url) {
@@ -127,6 +135,62 @@ function updateArticleMetadata(article, text, images) {
   if (article.created_at && !Number.isNaN(Date.parse(article.created_at))) data.datePublished = article.created_at;
   structured.textContent = JSON.stringify(data).replace(/</g, "\\u003c");
   document.head.append(structured);
+
+  const faq = extractArticleFaq(document.getElementById("article-body"));
+  const existingFaq = document.getElementById("article-faq-data");
+  if (faq.length) {
+    const faqScript = existingFaq || document.createElement("script");
+    faqScript.id = "article-faq-data";
+    faqScript.type = "application/ld+json";
+    faqScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faq.map(item => ({ "@type": "Question", name: item.question, acceptedAnswer: { "@type": "Answer", text: item.answer } }))
+    }).replace(/</g, "\\u003c");
+    document.head.append(faqScript);
+  } else if (existingFaq) {
+    existingFaq.remove();
+  }
+}
+
+// Reads the article's "Frequently asked questions" section. Supports both formats used in the editor:
+// an H3 question followed by answer paragraphs, or a paragraph that opens with a bold question.
+function extractArticleFaq(body) {
+  if (!body) return [];
+  const clean = value => String(value || "").replace(/\s+/g, " ").trim();
+  const items = [];
+  let inFaq = false;
+  let current = null;
+  const finish = () => {
+    if (current && current.question && clean(current.answer)) items.push({ question: current.question, answer: clean(current.answer) });
+    current = null;
+  };
+  for (const node of body.children) {
+    const tag = node.tagName;
+    if (tag === "H2") {
+      finish();
+      inFaq = /frequently asked questions|^faqs?$/i.test(clean(node.textContent));
+      continue;
+    }
+    if (!inFaq) continue;
+    if (tag === "H3") {
+      finish();
+      current = { question: clean(node.textContent), answer: "" };
+      continue;
+    }
+    const lead = node.firstElementChild;
+    const leadText = lead && ["STRONG", "B"].includes(lead.tagName) ? clean(lead.textContent) : "";
+    if (tag === "P" && leadText.endsWith("?") && clean(node.textContent).startsWith(leadText)) {
+      finish();
+      // Bold-question answers stay within their own paragraph, so later notes are never attached to them.
+      current = { question: leadText, answer: clean(node.textContent).slice(leadText.length) };
+      finish();
+      continue;
+    }
+    if (current) current.answer += " " + clean(node.textContent);
+  }
+  finish();
+  return items.slice(0, 20);
 }
 
 async function loadArticle() {
