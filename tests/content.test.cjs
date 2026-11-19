@@ -555,6 +555,54 @@ test('hero first-play overlay waits for success, restores controls once, and ret
   assert.equal(calls, 2);
 });
 
+test('static build writes robots.txt, crawlable article links on Education and homepage, and the default share image', async () => {
+  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'pinnacle-seo-build-'));
+  try {
+    const older = { ...post, id: '1', slug: 'older-post', title: 'Older <Post>', created_at: '2026-01-01T00:00:00Z' };
+    const newer = { ...post, id: '2', slug: 'newer-post', title: 'Newer Post', thumbnail_url: null, image_urls: [], created_at: '2026-10-01T00:00:00Z' };
+    await build({ education_videos: [older, newer] }, output);
+    const robots = fs.readFileSync(path.join(output, 'robots.txt'), 'utf8');
+    assert.match(robots, /^User-agent: \*$/m);
+    assert.match(robots, /^Sitemap: https:\/\/join\.pinnaclerealty\.ca\/sitemap\.xml$/m);
+    assert.match(robots, /^Disallow: \/admin\.html$/m);
+    assert.doesNotMatch(robots, /^Disallow: \/\s*$/m);
+    assert(fs.existsSync(path.join(output, 'og-default.png')));
+    const blog = new JSDOM(fs.readFileSync(path.join(output, 'blog.html'), 'utf8')).window.document;
+    const cards = [...blog.querySelectorAll('#education-video-grid a.education-video-card')];
+    assert.deepEqual(cards.map(a => a.getAttribute('href')), ['/articles/newer-post/', '/articles/older-post/']);
+    assert.equal(cards[1].querySelector('h3').textContent, 'Older <Post>');
+    assert(!blog.querySelector('#education-video-grid .education-loader'));
+    assert.equal(blog.querySelectorAll('h1').length, 1);
+    const home = new JSDOM(fs.readFileSync(path.join(output, 'index.html'), 'utf8')).window.document;
+    assert.deepEqual([...home.querySelectorAll('.case-list a.case-row')].map(a => a.getAttribute('href')), ['/articles/newer-post/', '/articles/older-post/']);
+    assert.equal(home.querySelector('.hero').nextElementSibling.id, 'testimonials');
+    for (const doc of [blog, home]) assert.equal(doc.querySelector('meta[property="og:image"]').content, 'https://join.pinnaclerealty.ca/og-default.png');
+  } finally { fs.rmSync(output, { recursive: true, force: true }); }
+});
+
+test('article metadata keeps titles within search length, adds Twitter tags and builds FAQ schema from both FAQ formats', () => {
+  const faqBody = '<h2>Intro</h2><p>Not part of the FAQ?</p><h2>Frequently asked questions</h2>'
+    + '<h3>Who files the transfer?</h3><p>The new brokerage.</p><p>It pays the fee.</p>'
+    + '<p><strong>Can RECO help?</strong> No, it is a contract matter.</p>'
+    + '<p>Author note that is not an answer.</p><h2>After the move</h2><p>Unrelated.</p>';
+  const shortPost = { ...post, slug: 'short-title', title: 'Short title', article: '<!--pinnacle-rich-text:v1-->' + faqBody, thumbnail_url: null, image_urls: [] };
+  let doc = new JSDOM(renderPage('article', shortPost).html).window.document;
+  assert.equal(doc.title, 'Short title | Pinnacle Realty');
+  assert.equal(doc.querySelector('meta[name="twitter:card"]').content, 'summary_large_image');
+  assert.equal(doc.querySelector('meta[property="og:image"]').content, 'https://join.pinnaclerealty.ca/og-default.png');
+  const faq = JSON.parse(doc.querySelector('#article-faq-data').textContent);
+  assert.equal(faq['@type'], 'FAQPage');
+  assert.deepEqual(faq.mainEntity.map(q => [q.name, q.acceptedAnswer.text]), [
+    ['Who files the transfer?', 'The new brokerage. It pays the fee.'],
+    ['Can RECO help?', 'No, it is a contract matter.']
+  ]);
+  const longTitle = 'How to Get Real Estate Clients in Ontario Without Cold Calling Ever Again';
+  doc = new JSDOM(renderPage('article', { ...post, slug: 'long-title', title: longTitle }).html).window.document;
+  assert.equal(doc.title, longTitle);
+  assert(!doc.querySelector('#article-faq-data'));
+  assert.equal(doc.querySelector('meta[property="og:image"]').content, post.thumbnail_url);
+});
+
 (async () => {
   for (const [name, fn] of tests) { await fn(); console.log(`PASS ${name}`); }
   for (const file of ['rich-text.js', 'content.js', 'article.js', 'admin.js']) new vm.Script(fs.readFileSync(path.join(root, file), 'utf8'), { filename: file });
